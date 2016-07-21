@@ -5,7 +5,7 @@
 
 	<groupId>de.ck35.monitoring</groupId>
 	<artifactId>request-tagging</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>0.5.0</version>
 	<packaging>pom</packaging>
 	
 	<name>request-tagging</name>
@@ -30,7 +30,7 @@
     <scm>
         <developerConnection>scm:git:https://github.com/CK35/request-tagging.git</developerConnection>
         <url>https://github.com/CK35/request-tagging</url>
-        <tag>HEAD</tag>
+        <tag>request-tagging-0.5.0</tag>
     </scm>
     
 	<properties>

@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/CK35/request-tagging/badge.svg?branch=master)](https://coveralls.io/github/CK35/request-tagging?branch=master)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/de.ck35.monitoring/request-tagging-core/badge.svg?style=flat)](http://search.maven.org/#search|ga|1|g%3Ade.ck35.monitoring)
 
-This project delivers a lightweight mechanism for request tagging with zero dependencies. Tag your requests anywhere in your Java based web application where you have all required information. All you have to do is retrieving the currently active Request Tagging Status and attach your local information.
+This project delivers a lightweight mechanism for request tagging with zero dependencies. Tag your requests anywhere in your Java based web application where you have all required information. All you have to do is retrieving the currently active Request Tagging Status and attach your local information. A simple reporting mechanism is also included which allows you to send the tagged request data to an InfluxDB.
 
 For example inside an Apache Wicket web application the source looks like this:
 
@@ -30,7 +30,7 @@ public class HomePage extends BasePage {
     }
 }
 ```
-This example demonstrates the usage of the Request Tagging mechanism. As you can see it is not bound to any framework and can be accessed inside an web application e.g. Spring MVC.
+This example demonstrates the usage of the Request Tagging mechanism. As you can see it is not bound to any framework and can be accessed inside any web application e.g. Spring MVC.
 
 #####Maven dependency
 ```xml

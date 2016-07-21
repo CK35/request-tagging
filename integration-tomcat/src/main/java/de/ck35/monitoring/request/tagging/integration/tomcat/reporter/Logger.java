@@ -1,4 +1,4 @@
-package de.ck35.monitoring.request.tagging.valve.reporter;
+package de.ck35.monitoring.request.tagging.integration.tomcat.reporter;
 
 import java.time.Instant;
 import java.util.Map;

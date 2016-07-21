@@ -1,4 +1,4 @@
-package de.ck35.monitoring.request.tagging.valve;
+package de.ck35.monitoring.request.integration.tomcat;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -26,7 +26,7 @@ import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatusConsum
 import de.ck35.monitoring.request.tagging.core.RequestTaggingRunnable;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
 import de.ck35.monitoring.request.tagging.core.reporter.influxdb.InfluxDB;
-import de.ck35.monitoring.request.tagging.valve.reporter.Logger;
+import de.ck35.monitoring.request.tagging.integration.tomcat.reporter.Logger;
 
 public class RequestTaggingValve extends ValveBase {
 

@@ -37,7 +37,7 @@ This example demonstrates the usage of the Request Tagging mechanism. As you can
 <dependency>
     <groupId>de.ck35.monitoring</groupId>
     <artifactId>request-tagging-core</artifactId>
-    <version>1.0.0</version>
+    <version>0.5.0</version>
     <scope>provided</scope>
 </dependency>
 ```

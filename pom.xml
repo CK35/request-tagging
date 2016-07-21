@@ -5,11 +5,11 @@
 
 	<groupId>de.ck35.monitoring</groupId>
 	<artifactId>request-tagging</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	
 	<name>request-tagging</name>
-    <description />
+    <description>Lightweight mechanism for request tagging with zero dependencies.</description>
     <url>https://github.com/CK35/request-tagging</url>
 
 	<developers>

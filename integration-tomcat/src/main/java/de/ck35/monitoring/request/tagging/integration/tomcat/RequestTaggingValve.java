@@ -63,8 +63,6 @@ public class RequestTaggingValve extends ValveBase {
             throw e.getCause();
         }
     }
-
-    
     
     @Override
     public String getInfo() {

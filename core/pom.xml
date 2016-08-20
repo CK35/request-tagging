@@ -12,7 +12,7 @@
     <artifactId>request-tagging-core</artifactId>
     
     <dependencies>
-    <!-- DEPENDENCIES FOR TESTING -->
+        <!-- DEPENDENCIES FOR TESTING -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

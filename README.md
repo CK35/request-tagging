@@ -45,7 +45,7 @@ This example demonstrates the usage of the Request Tagging mechanism. As you can
 #####Prepare Apache Tomcat and write to InfluxDB
 There is an ready to use Tomcat integration which enables the Request Tagging mechanism for all web applications running inside the Servlet Container. Simply add the following Tomcat Valve to your server.xml file.
 ```xml
-<Valve className="de.ck35.monitoring.request.integration.tomcat.RequestTaggingValve" 
+<Valve className="de.ck35.monitoring.request.tagging.integration.tomcat.RequestTaggingValve" 
        influxDBDatabaseName="your-db-name" />
 ```
 With this minimal configuration all request tagging data will be send to InfluxDB on the same host. You can change many of the parameters e.g. 'influxDBHostName' and 'influxDBPort'.

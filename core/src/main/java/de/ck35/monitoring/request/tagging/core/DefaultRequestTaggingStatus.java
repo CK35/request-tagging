@@ -8,6 +8,13 @@ import java.util.function.Consumer;
 
 import de.ck35.monitoring.request.tagging.RequestTagging;
 
+/**
+ * Default implementation of the request tagging status which uses an Enum for
+ * the status changes (success, client error or server error). 
+ *
+ * @author Christian Kaspari
+ * @since 1.0.0
+ */
 public class DefaultRequestTaggingStatus implements RequestTagging.Status {
     
     public static final String DEFAULT_RESOURCE_NAME = "default";

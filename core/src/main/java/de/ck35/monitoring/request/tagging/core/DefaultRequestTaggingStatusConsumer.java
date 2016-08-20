@@ -16,6 +16,14 @@ import java.util.function.Consumer;
 import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus.StatusCode;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
 
+/**
+ * Default implementation of the request tagging status consumer which counts status codes
+ * inside a meta data tree. The tree is build from the resource name and the optional
+ * status meta data.
+ *
+ * @author Christian Kaspari
+ * @since 1.0.0
+ */
 public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequestTaggingStatus>{
 
     private ReadWriteLock resetLock;

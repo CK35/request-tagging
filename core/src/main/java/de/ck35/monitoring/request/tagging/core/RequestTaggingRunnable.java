@@ -2,6 +2,15 @@ package de.ck35.monitoring.request.tagging.core;
 
 import de.ck35.monitoring.request.tagging.RequestTagging;
 
+/**
+ * Provides the request tagging mechanism. Wraps a {@link Runnable} which can access the
+ * given status while processing. This implementation ensures that request tagging status
+ * is cleared after the {@link Runnable} has been invoked. If the given {@link Runnable}
+ * throws an unchecked exception a server error status will be applied automatically.
+ *
+ * @author Christian Kaspari
+ * @since 1.0.0
+ */
 public class RequestTaggingRunnable implements Runnable {
     
     private static final String EXCEPTION_CAUSE_KEY = "serverErrorCause";

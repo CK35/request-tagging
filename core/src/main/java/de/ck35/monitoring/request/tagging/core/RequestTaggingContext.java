@@ -1,41 +1,42 @@
-package de.ck35.monitoring.request.integration.tomcat;
+package de.ck35.monitoring.request.tagging.core;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.Closeable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-import javax.servlet.ServletException;
-
-import org.apache.catalina.LifecycleException;
-import org.apache.catalina.connector.Request;
-import org.apache.catalina.connector.Response;
-import org.apache.catalina.valves.ValveBase;
-import org.apache.juli.logging.Log;
-import org.apache.juli.logging.LogFactory;
-
-import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus;
-import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatusConsumer;
-import de.ck35.monitoring.request.tagging.core.RequestTaggingRunnable;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
 import de.ck35.monitoring.request.tagging.core.reporter.influxdb.InfluxDB;
-import de.ck35.monitoring.request.tagging.integration.tomcat.reporter.Logger;
 
-public class RequestTaggingValve extends ValveBase {
 
-    private static final Log LOG = LogFactory.getLog(RequestTaggingValve.class);
-
+/**
+ * A reusable context for Request Tagging. 
+ *
+ * @author Christian Kaspari
+ * @since 1.0.0
+ */
+public class RequestTaggingContext implements Closeable {
+    
     private final DefaultRequestTaggingStatusConsumer consumer;
     private final ScheduledThreadPoolExecutor executor;
     private final AtomicReference<Instant> nextResetReference;
 
+    private volatile Supplier<Function<Instant, RequestTaggingStatusReporter>> defaultRequestTaggingStatusReporterSupplier;
+    
+    private volatile Consumer<String> loggerInfo;
+    private volatile BiConsumer<String, Throwable> loggerWarn;
+    
     private volatile Clock clock;
     private volatile Duration collectorSendDelayDuration;
     private volatile Duration collectorResetDelayDuration;
@@ -44,6 +45,7 @@ public class RequestTaggingValve extends ValveBase {
     private volatile String localHostName;
     private volatile String localInstanceId;
 
+    private volatile boolean reportToInfluxDB;
     private volatile String influxDBProtocol;
     private volatile String influxDBHostName;
     private volatile String influxDBPort;
@@ -51,10 +53,8 @@ public class RequestTaggingValve extends ValveBase {
     
     private volatile int connectionTimeout;
     private volatile int readTimeout;
-
-    public RequestTaggingValve() {
-        super(true);
-
+    
+    public RequestTaggingContext() {
         collectorSendDelayDuration = Duration.parse("PT1M");
         collectorResetDelayDuration = Duration.parse("P1D");
 
@@ -62,22 +62,30 @@ public class RequestTaggingValve extends ValveBase {
         executor = new ScheduledThreadPoolExecutor(1);
         nextResetReference = new AtomicReference<>(Instant.now()
                                                           .plus(collectorResetDelayDuration));
-
+        
+        defaultRequestTaggingStatusReporterSupplier = () -> DefaultReporter.forLogger(loggerInfo);
+        
+        loggerInfo = System.out::println;
+        loggerWarn = (message, throwable) -> {
+            System.out.println(message);
+            throwable.printStackTrace();
+        };
+        
         localInstanceId = null;
         localHostName = null;
-
+        
+        reportToInfluxDB = false;
         influxDBProtocol = "http";
         influxDBHostName = "localhost";
         influxDBPort = "8086";
-        influxDBDatabaseName = null;
+        influxDBDatabaseName = "request-tagging";
         connectionTimeout = 5000;
         readTimeout = 5000;
     }
-
-    @Override
-    protected synchronized void startInternal() throws LifecycleException {
-        super.startInternal();
-
+    
+    public void initialize() {
+        loggerInfo.accept("Initializing request tagging context.");
+        
         clock = Clock.tick(Clock.systemUTC(), collectorSendDelayDuration);
         
         if(localHostName == null) {
@@ -89,9 +97,8 @@ public class RequestTaggingValve extends ValveBase {
             }
         }
 
-        String influxDBDatabaseName = this.influxDBDatabaseName;
-        if (influxDBDatabaseName != null) {
-            LOG.info("Using InfluxDB: '" + influxDBHostName + ":" + influxDBPort + "' for request tagging data reporting.");
+        if (reportToInfluxDB) {
+            loggerInfo.accept("Using InfluxDB: '" + influxDBHostName + ":" + influxDBPort + "' for request tagging data reporting.");
             reporterFunctionReference = new InfluxDB(localHostName,
                                                      localInstanceId,
                                                      influxDBProtocol,
@@ -101,41 +108,21 @@ public class RequestTaggingValve extends ValveBase {
                                                      connectionTimeout,
                                                      readTimeout)::reporter;
         } else {
-            LOG.info("Using logger for request taggging data reporting.");
-            reporterFunctionReference = new Logger()::reporter;
+            loggerInfo.accept("Could not create request tagging data reporter. Falling back to default.");
+            reporterFunctionReference = defaultRequestTaggingStatusReporterSupplier.get();
         }
 
-        LOG.info("Scheduling send process for request tagging data with delay of '" + collectorSendDelayDuration + "'.");
+        loggerInfo.accept("Scheduling send process for request tagging data with delay of '" + collectorSendDelayDuration + "'.");
         long startDelay = Math.max(0, clock.instant().plus(collectorSendDelayDuration).toEpochMilli() - Instant.now().toEpochMilli());
         executor.scheduleWithFixedDelay(this::send, startDelay, collectorSendDelayDuration.toMillis(), TimeUnit.MILLISECONDS);
     }
-
+    
     @Override
-    protected synchronized void stopInternal() throws LifecycleException {
-        super.stopInternal();
-        LOG.info("Stopping send process for request tagging data.");
+    public void close() {
+        loggerInfo.accept("Shutting down request tagging context.");
         executor.shutdown();
     }
-
-    @Override
-    public void invoke(Request request, Response response) throws IOException, ServletException {
-        try {
-            taggingRunnable(() -> {
-                try {
-                    next.invoke(request, response);
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                } catch (ServletException e) {
-                    throw new UncheckedServletException(e);
-                }
-            }).run();
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
-        } catch (UncheckedServletException e) {
-            throw e.getCause();
-        }
-    }
-
+    
     protected void send() {
         try {
             Instant now = clock.instant();
@@ -148,45 +135,73 @@ public class RequestTaggingValve extends ValveBase {
             }
             reporter.commit();
         } catch (RuntimeException e) {
-            LOG.warn("Error while sending request tagging data!", e);
+            loggerWarn.accept("Error while sending request tagging data!", e);
         }
     }
 
-    protected RequestTaggingRunnable taggingRunnable(Runnable runnable) {
+    public RequestTaggingRunnable taggingRunnable(Runnable runnable) {
         DefaultRequestTaggingStatus status = new DefaultRequestTaggingStatus(consumer);
         return new RequestTaggingRunnable(runnable, status);
     }
-
-    @Override
-    public String getInfo() {
-        return "A request tagging Tomcat Valve implementation.";
+    
+    public static class DefaultReporter implements RequestTaggingStatusReporter {
+        
+        private final Consumer<String> logger;
+        private final Instant instant;
+        
+        public DefaultReporter(Consumer<String> logger, Instant instant) {
+            this.logger = logger;
+            this.instant = instant;
+        }
+        @Override
+        public void accept(String resourceName, Map<String, Long> statusCodeCounters, Map<String, String> metaData) {
+            logger.accept("Request Data: [" + instant.toString() + "] " + resourceName + ": " + statusCodeCounters + " - " + metaData);
+        }
+        @Override
+        public void commit() {
+            //Ignore because already logged data
+        }
+        public static Function<Instant, RequestTaggingStatusReporter> forLogger(Consumer<String> logger) {
+            return instant -> new DefaultReporter(logger, instant);
+        }
     }
     
-    public void setLocalHostName(String localHostName) {
-        this.localHostName = localHostName;
+    public void setDefaultRequestTaggingStatusReporterSupplier(Supplier<Function<Instant, RequestTaggingStatusReporter>> defaultRequestTaggingStatusReporterSupplier) {
+        this.defaultRequestTaggingStatusReporterSupplier = Objects.requireNonNull(defaultRequestTaggingStatusReporterSupplier, "Can not set defaultRequestTaggingStatusReporterSupplier to null!");
     }
-    public void setLocalInstanceId(String localInstanceId) {
-        this.localInstanceId = localInstanceId;
+    public void setLoggerInfo(Consumer<String> loggerInfo) {
+        this.loggerInfo = Objects.requireNonNull(loggerInfo, "Can not set loggerInfo to null!");
     }
-
-    public void setCollectorResetDelayDuration(String collectorResetDelayDuration) {
-        this.collectorResetDelayDuration = Duration.parse(collectorResetDelayDuration);
+    public void setLoggerWarn(BiConsumer<String, Throwable> loggerWarn) {
+        this.loggerWarn = Objects.requireNonNull(loggerWarn, "Can not set loggerWarn to null!");
     }
     public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
         this.collectorSendDelayDuration = Duration.parse(collectorSendDelayDuration);
     }
+    public void setCollectorResetDelayDuration(String collectorResetDelayDuration) {
+        this.collectorResetDelayDuration = Duration.parse(collectorResetDelayDuration);
+    }
+    public void setLocalHostName(String localHostName) {
+        this.localHostName = Objects.requireNonNull(localHostName, "Can not set localHostName to null!");
+    }
+    public void setLocalInstanceId(String localInstanceId) {
+        this.localInstanceId = Objects.requireNonNull(localInstanceId, "Can not set localInstanceId to null!");
+    }
 
+    public void setReportToInfluxDB(boolean reportToInfluxDB) {
+        this.reportToInfluxDB = reportToInfluxDB;
+    }
     public void setInfluxDBProtocol(String influxDBProtocol) {
-        this.influxDBProtocol = influxDBProtocol;
+        this.influxDBProtocol = Objects.requireNonNull(influxDBProtocol, "Can not set influxDBProtocol to null!");
     }
     public void setInfluxDBHostName(String influxDBHostName) {
-        this.influxDBHostName = influxDBHostName;
+        this.influxDBHostName = Objects.requireNonNull(influxDBHostName, "Can not set influxDBHostName to null!");
     }
     public void setInfluxDBPort(String influxDBPort) {
-        this.influxDBPort = influxDBPort;
+        this.influxDBPort = Objects.requireNonNull(influxDBPort, "Can not set influxDBPort to null!");
     }
     public void setInfluxDBDatabaseName(String influxDBDatabaseName) {
-        this.influxDBDatabaseName = influxDBDatabaseName;
+        this.influxDBDatabaseName = Objects.requireNonNull(influxDBDatabaseName, "Can not set influxDBDatabaseName to null!");
     }
     
     public void setConnectionTimeout(int connectionTimeout) {
@@ -195,15 +210,5 @@ public class RequestTaggingValve extends ValveBase {
     public void setReadTimeout(int readTimeout) {
         this.readTimeout = readTimeout;
     }
-
-    private static class UncheckedServletException extends RuntimeException {
-
-        public UncheckedServletException(ServletException servletException) {
-            super(servletException);
-        }
-        @Override
-        public ServletException getCause() {
-            return (ServletException) super.getCause();
-        }
-    }
+    
 }

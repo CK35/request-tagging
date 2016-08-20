@@ -15,6 +15,12 @@ import java.util.function.Consumer;
 
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
 
+/**
+ * An reporter implementation which sends data to an InfluxDB instance. 
+ *
+ * @author Christian Kaspari
+ * @since 1.0.0
+ */
 public class InfluxDB {
 
     private static final int STATUS_CODE_SUCCESS = 204;

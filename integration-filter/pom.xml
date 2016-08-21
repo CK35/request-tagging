@@ -6,7 +6,7 @@
     <parent>
         <groupId>de.ck35.monitoring</groupId>
         <artifactId>request-tagging</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>request-tagging-integration-filter</artifactId>
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>de.ck35.monitoring</groupId>
             <artifactId>request-tagging-core</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

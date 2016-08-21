@@ -103,8 +103,8 @@ public class RequestTagging {
     /**
      * Initialize request tagging with the given status. The caller of this method is responsible
      * for removing request tagging status when request processing is done with {@link #remove()}
-     * <br/>
-     * <br/>
+     * <br>
+     * <br>
      * <b>This method is intended for request tagging providers. 
      *    Users of request tagging should only call {@link #get()} or {@link #getOptional()}
      * </b>
@@ -131,8 +131,8 @@ public class RequestTagging {
     
     /**
      * Remove the current request tagging status.
-     * <br/>
-     * <br/>
+     * <br>
+     * <br>
      * <b>This method is intended for request tagging providers. 
      *    Users of request tagging should only call {@link #get()} or {@link #getOptional()}
      * </b>

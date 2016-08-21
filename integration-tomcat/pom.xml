@@ -6,7 +6,7 @@
     <parent>
         <groupId>de.ck35.monitoring</groupId>
         <artifactId>request-tagging</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>request-tagging-integration-tomcat</artifactId>
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>de.ck35.monitoring</groupId>
             <artifactId>request-tagging-core</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
         <!-- TOMCAT DEPENDENCIES MUST BE PROVIDED -->

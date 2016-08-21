@@ -98,6 +98,8 @@ public class RequestTagging {
     
     private static final ThreadLocal<Status> STATUS = new ThreadLocal<>();
     
+    private RequestTagging(){};
+    
     /**
      * Initialize request tagging with the given status. The caller of this method is responsible
      * for removing request tagging status when request processing is done with {@link #remove()}
@@ -160,15 +162,15 @@ public class RequestTagging {
             return this;
         }
         @Override
+        public Status clientError() {
+            return this;
+        }
+        @Override
         public Status ignore() {
             return this;
         }
         @Override
         public Status heed() {
-            return this;
-        }
-        @Override
-        public Status clientError() {
             return this;
         }
         public Runnable handover(Runnable runnable) {

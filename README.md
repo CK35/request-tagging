@@ -37,15 +37,48 @@ This example demonstrates the usage of the Request Tagging mechanism. As you can
 <dependency>
     <groupId>de.ck35.monitoring</groupId>
     <artifactId>request-tagging-core</artifactId>
-    <version>0.5.0</version>
+    <version>1.0.0</version>
     <scope>provided</scope>
 </dependency>
 ```
 
-#####Prepare Apache Tomcat and write to InfluxDB
+#####Use Apache Tomcat integration
 There is an ready to use Tomcat integration which enables the Request Tagging mechanism for all web applications running inside the Servlet Container. Simply add the following Tomcat Valve to your server.xml file.
 ```xml
 <Valve className="de.ck35.monitoring.request.tagging.integration.tomcat.RequestTaggingValve" 
-       influxDBDatabaseName="your-db-name" />
+       influxDBDatabaseName="your-db-name" reportToInfluxDB="true" />
 ```
-With this minimal configuration all request tagging data will be send to InfluxDB on the same host. You can change many of the parameters e.g. 'influxDBHostName' and 'influxDBPort'.
+Download the required "jar-with-dependencies.jar" from [Maven Central](http://search.maven.org/#search|ga|1|a%3A%22request-tagging-integration-tomcat%22) and add it to the tomcat/lib directory.
+This is should be the preferred way of integration because it keeps the web application free from infrastructure configuration aspects.  
+
+#####Use Servlet filter integration
+If modifying Tomcat installation is not possible you can integrate request-tagging with the help of a Servlet filter. First add the following Maven depedencies to your project:
+```xml
+<dependency>
+    <groupId>de.ck35.monitoring</groupId>
+    <artifactId>request-tagging-core</artifactId>
+    <version>1.0.0</version>
+</dependency>
+<dependency>
+    <groupId>de.ck35.monitoring</groupId>
+    <artifactId>request-tagging-integration-filter</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+Now you can add the `de.ck35.monitoring.request.tagging.integration.filter.RequestTaggingFilter` to your `web.xml` or `WebApplicationInitializer`.
+
+#####Sending requets-tagging data to InfluxDB
+By default a simple reporting mechanism is already included which sends out the request-tagging data to an InfluxDB every minute.
+All properties can be changed via server.xml or filter init parameters:
+
+| Property                  | Description                                       |
+|---------------------------|----------------------------------------------------------------------------|
+| localHostName| The name of the host which sends the request-tagging data. Default: Reverse name lookup |
+| localInstanceId| An id which separates different software on the same host. Default: `null`|
+| reportToInfluxDB| Enable the reporting to InfluxDB. Default: `false`|
+| influxDBProtocol| The protocol which should be used for sending. Default: `http`|
+| influxDBHostName| The host name of the InfluxDB. Default: `localhost`|
+| influxDBPort| The port of the InfluxDB. Default: `8086`|
+| influxDBDatabaseName| The name of the InfluxDB database. Default: `request-tagging`|
+| connectionTimeout| The socket connection timout for sending request-tagging data. Default: `5000` ms|
+| readTimeout| The socket read tiemout for sending request-tagging data. Default: `5000` ms|

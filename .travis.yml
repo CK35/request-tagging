@@ -3,3 +3,5 @@ jdk:
   - oraclejdk8
 script:
   - mvn clean package site
+after_success:
+  - mvn coveralls:report -PsendCoverageReport

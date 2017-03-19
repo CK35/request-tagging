@@ -13,6 +13,7 @@ import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
+import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
 
 /**
  * Tomcat Valve implementation which adds the request tagging mechanism to all incoming requests. 
@@ -25,10 +26,12 @@ public class RequestTaggingValve extends ValveBase {
     private static final Log LOG = LogFactory.getLog(RequestTaggingValve.class);
 
     private final RequestTaggingContext context;
+    private final RequestTaggingStatusReporterFactory statusReporterFactory;
 
     public RequestTaggingValve() {
         super(true);
-        context = new RequestTaggingContext();
+        statusReporterFactory = new RequestTaggingStatusReporterFactory();
+        context = new RequestTaggingContext(statusReporterFactory::build);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
     }
@@ -69,38 +72,41 @@ public class RequestTaggingValve extends ValveBase {
         return "A request tagging Tomcat Valve implementation.";
     }
     
-    public void setLocalHostName(String localHostName) {
-        context.setLocalHostName(localHostName);
-    }
-    public void setLocalInstanceId(String localInstanceId) {
-        context.setLocalInstanceId(localInstanceId);
-    }
-
-    public void setCollectorResetDelayDuration(String collectorResetDelayDuration) {
-        context.setCollectorResetDelayDuration(collectorResetDelayDuration);
-    }
+    
     public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
         context.setCollectorSendDelayDuration(collectorSendDelayDuration);
     }
-
+    public void setCollectorResetDelayDuration(String collectorResetDelayDuration) {
+        context.setCollectorResetDelayDuration(collectorResetDelayDuration);
+    }
+    public void setLocalHostName(String localHostName) {
+        statusReporterFactory.setLocalHostName(localHostName);
+    }
+    public void setLocalInstanceId(String localInstanceId) {
+        statusReporterFactory.setLocalInstanceId(localInstanceId);
+    }
+    
+    public void setReportToInfluxDB(boolean reportToInfluxDB) {
+        statusReporterFactory.setReportToInfluxDB(reportToInfluxDB);
+    }
     public void setInfluxDBProtocol(String influxDBProtocol) {
-        context.setInfluxDBProtocol(influxDBProtocol);
+        statusReporterFactory.setInfluxDBProtocol(influxDBProtocol);
     }
     public void setInfluxDBHostName(String influxDBHostName) {
-        context.setInfluxDBHostName(influxDBHostName);
+        statusReporterFactory.setInfluxDBHostName(influxDBHostName);
     }
     public void setInfluxDBPort(String influxDBPort) {
-        context.setInfluxDBPort(influxDBPort);
+        statusReporterFactory.setInfluxDBPort(influxDBPort);
     }
     public void setInfluxDBDatabaseName(String influxDBDatabaseName) {
-        context.setInfluxDBDatabaseName(influxDBDatabaseName);
+        statusReporterFactory.setInfluxDBDatabaseName(influxDBDatabaseName);
     }
     
     public void setConnectionTimeout(int connectionTimeout) {
-        context.setConnectionTimeout(connectionTimeout);
+        statusReporterFactory.setConnectionTimeout(connectionTimeout);
     }
     public void setReadTimeout(int readTimeout) {
-        context.setReadTimeout(readTimeout);
+        statusReporterFactory.setReadTimeout(readTimeout);
     }
 
     private static class UncheckedServletException extends RuntimeException {

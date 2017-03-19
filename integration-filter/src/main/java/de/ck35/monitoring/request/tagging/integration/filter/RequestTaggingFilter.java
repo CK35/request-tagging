@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
+import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
 
 /**
  * Enable request tagginig for all requests which are send through this servlet filter.
@@ -28,9 +29,11 @@ public class RequestTaggingFilter implements Filter {
     private static final Logger LOG = LoggerFactory.getLogger(RequestTaggingFilter.class);
 
     private final RequestTaggingContext context;
+    private final RequestTaggingStatusReporterFactory statusReporterFactory;
 
     public RequestTaggingFilter() {
-        context = new RequestTaggingContext();
+        statusReporterFactory = new RequestTaggingStatusReporterFactory();
+        context = new RequestTaggingContext(statusReporterFactory::build);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
     }
@@ -59,17 +62,17 @@ public class RequestTaggingFilter implements Filter {
         FilterConfigWrapper config = new FilterConfigWrapper(filterConfig);
         config.apply("collectorSendDelayDuration", context::setCollectorSendDelayDuration);
         config.apply("collectorResetDelayDuration", context::setCollectorResetDelayDuration);
-        config.apply("localHostName", context::setLocalHostName);
-        config.apply("localInstanceId", context::setLocalInstanceId);
+        config.apply("localHostName", statusReporterFactory::setLocalHostName);
+        config.apply("localInstanceId", statusReporterFactory::setLocalInstanceId);
 
-        config.applyBoolean("reportToInfluxDB", context::setReportToInfluxDB);
-        config.apply("influxDBProtocol", context::setInfluxDBProtocol);
-        config.apply("influxDBHostName", context::setInfluxDBHostName);
-        config.apply("influxDBPort", context::setInfluxDBPort);
-        config.apply("influxDBDatabaseName", context::setInfluxDBDatabaseName);
+        config.applyBoolean("reportToInfluxDB", statusReporterFactory::setReportToInfluxDB);
+        config.apply("influxDBProtocol", statusReporterFactory::setInfluxDBProtocol);
+        config.apply("influxDBHostName", statusReporterFactory::setInfluxDBHostName);
+        config.apply("influxDBPort", statusReporterFactory::setInfluxDBPort);
+        config.apply("influxDBDatabaseName", statusReporterFactory::setInfluxDBDatabaseName);
 
-        config.applyInt("connectionTimeout", context::setConnectionTimeout);
-        config.applyInt("readTimeout", context::setReadTimeout);
+        config.applyInt("connectionTimeout", statusReporterFactory::setConnectionTimeout);
+        config.applyInt("readTimeout", statusReporterFactory::setReadTimeout);
 
         context.initialize();
     }

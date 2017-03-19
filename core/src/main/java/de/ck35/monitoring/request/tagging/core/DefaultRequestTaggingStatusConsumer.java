@@ -102,7 +102,7 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
                     statusCodes.put(statusCode.toString(), sum);
                 }
             });
-            if (!statusCodeCounters.isEmpty()) {
+            if (!statusCodes.isEmpty()) {
                 reporter.accept(resourceName, statusCodes, currentMetaData);
             }
             children.forEach((metaData, child) -> {

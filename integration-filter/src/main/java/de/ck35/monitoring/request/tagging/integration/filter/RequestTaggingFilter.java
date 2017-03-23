@@ -15,6 +15,7 @@ import javax.servlet.ServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
 
@@ -30,10 +31,12 @@ public class RequestTaggingFilter implements Filter {
 
     private final RequestTaggingContext context;
     private final RequestTaggingStatusReporterFactory statusReporterFactory;
+    private final HashAlgorithm hashAlgorithm;
 
     public RequestTaggingFilter() {
         statusReporterFactory = new RequestTaggingStatusReporterFactory();
-        context = new RequestTaggingContext(statusReporterFactory::build);
+        hashAlgorithm = new HashAlgorithm();
+        context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
     }
@@ -73,6 +76,8 @@ public class RequestTaggingFilter implements Filter {
 
         config.applyInt("connectionTimeout", statusReporterFactory::setConnectionTimeout);
         config.applyInt("readTimeout", statusReporterFactory::setReadTimeout);
+        
+        config.apply("hashAlgorithmName", hashAlgorithm::setAlgorithmName);
 
         context.initialize();
     }

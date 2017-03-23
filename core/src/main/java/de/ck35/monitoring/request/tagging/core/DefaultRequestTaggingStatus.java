@@ -5,8 +5,10 @@ import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import de.ck35.monitoring.request.tagging.RequestTagging;
+import de.ck35.monitoring.request.tagging.RequestTagging.Status;
 
 /**
  * Default implementation of the request tagging status which uses an Enum for
@@ -30,21 +32,25 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
     }
     
     private final Consumer<DefaultRequestTaggingStatus> statusConsumer;
+    private final Function<String, String> hashAlgorithm;
     
     private SortedMap<String, String> metaData;
 
     private volatile boolean ignored;
     private volatile String resourceName;
     private volatile StatusCode statusCode;
-    
-    public DefaultRequestTaggingStatus(Consumer<DefaultRequestTaggingStatus> statusConsumer) {
-        this.statusConsumer = statusConsumer;
+
+    public DefaultRequestTaggingStatus(Consumer<DefaultRequestTaggingStatus> statusConsumer,
+                                       Function<String, String> hashAlgorithm) {
+        this.statusConsumer = Objects.requireNonNull(statusConsumer);
+        this.hashAlgorithm = Objects.requireNonNull(hashAlgorithm);
         this.ignored = false;
         this.resourceName = DEFAULT_RESOURCE_NAME;
         this.statusCode = StatusCode.SUCCESS;
     }
     public DefaultRequestTaggingStatus(DefaultRequestTaggingStatus status) {
         this.statusConsumer = status.statusConsumer;
+        this.hashAlgorithm = status.hashAlgorithm;
         this.ignored = status.isIgnored();
         this.resourceName = status.getResourceName();
         this.statusCode = status.getStatusCode();
@@ -99,6 +105,10 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
             metaData.put(key, value);
         }
         return this;
+    }
+    @Override
+    public Status withHashedMetaData(String key, String value) {
+        return withMetaData(key, hashAlgorithm.apply(value));
     }
     @Override
     public Runnable handover(Runnable runnable) {

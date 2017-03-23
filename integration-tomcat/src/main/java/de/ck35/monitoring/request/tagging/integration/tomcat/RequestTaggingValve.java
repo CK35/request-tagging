@@ -12,6 +12,7 @@ import org.apache.catalina.valves.ValveBase;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
 
+import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
 
@@ -27,11 +28,13 @@ public class RequestTaggingValve extends ValveBase {
 
     private final RequestTaggingContext context;
     private final RequestTaggingStatusReporterFactory statusReporterFactory;
+    private final HashAlgorithm hashAlgorithm;
 
     public RequestTaggingValve() {
         super(true);
         statusReporterFactory = new RequestTaggingStatusReporterFactory();
-        context = new RequestTaggingContext(statusReporterFactory::build);
+        hashAlgorithm = new HashAlgorithm();
+        context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
     }
@@ -109,6 +112,10 @@ public class RequestTaggingValve extends ValveBase {
         statusReporterFactory.setReadTimeout(readTimeout);
     }
 
+    public void setHashAlgorithmName(String hashAlgorithmName) {
+        hashAlgorithm.setAlgorithmName(hashAlgorithmName);
+    }
+    
     private static class UncheckedServletException extends RuntimeException {
 
         public UncheckedServletException(ServletException servletException) {

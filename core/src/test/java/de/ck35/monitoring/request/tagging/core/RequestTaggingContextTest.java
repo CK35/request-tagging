@@ -36,6 +36,7 @@ public class RequestTaggingContextTest {
     private static final Logger LOG = LoggerFactory.getLogger(RequestTaggingContextTest.class);
     
     private Supplier<Function<Instant, RequestTaggingStatusReporter>> defaultRequestTaggingStatusReporterSupplier;
+    private HashAlgorithm hashAlgorithm;
     private String collectorSendDelayDuration;
     private String collectorResetDelayDuration;
 
@@ -48,10 +49,11 @@ public class RequestTaggingContextTest {
         collectorResetDelayDuration = "PT1M";
         when(defaultRequestTaggingStatusReporter.apply(any())).thenReturn(requestTaggingStatusReporter);
         defaultRequestTaggingStatusReporterSupplier = () -> defaultRequestTaggingStatusReporter;
+        hashAlgorithm = new HashAlgorithm();
     }
 
     public RequestTaggingContext requestTaggingContext() {
-        RequestTaggingContext context = new RequestTaggingContext(defaultRequestTaggingStatusReporterSupplier);
+        RequestTaggingContext context = new RequestTaggingContext(defaultRequestTaggingStatusReporterSupplier, hashAlgorithm::hash);
         context.setCollectorSendDelayDuration(collectorSendDelayDuration);
         context.setCollectorResetDelayDuration(collectorResetDelayDuration);
         context.setLoggerInfo(LOG::info);
@@ -69,6 +71,18 @@ public class RequestTaggingContextTest {
                               .withMetaData("test-key", "test-value");
             }).run();
             verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-resource", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of("test-key", "test-value"));
+        }
+    }
+    
+    @Test
+    public void testSuccessWithHashedValues() {
+        try (RequestTaggingContext context = requestTaggingContext()) {
+            context.taggingRunnable(() -> {
+                RequestTagging.get()
+                              .withResourceName("test-resource")
+                              .withHashedMetaData("test-key", "test-value");
+            }).run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-resource", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of("test-key", "83B3C112B82DCCA8376DA029E8101BCC"));
         }
     }
     

@@ -79,6 +79,17 @@ public class RequestTagging {
         Status withMetaData(String key, String value);
         
         /**
+         * Add an optional key - value meta data pair. The given value will be hased with 
+         * the configured message digest algorithm.
+         * 
+         * @param key The key for the meta data.
+         * @param value The value which will be hashed.
+         * @return This instance for further updates.
+         * @since 1.1.0
+         */
+        Status withHashedMetaData(String key, String value);
+        
+        /**
          * Allow another runnable to report the status of this request. This is useful when
          * you have asynchronous request processing inside your application. The runnable
          * will receive its own copy of the current status so you can decide what should
@@ -152,6 +163,10 @@ public class RequestTagging {
         @Override
         public Status withMetaData(String key, String value) {
             return this;
+        }
+        @Override
+        public Status withHashedMetaData(String key, String value) {
+            return null;
         }
         @Override
         public Status success() {

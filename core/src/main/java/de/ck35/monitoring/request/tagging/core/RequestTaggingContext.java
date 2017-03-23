@@ -28,6 +28,7 @@ public class RequestTaggingContext implements Closeable {
     private final ScheduledThreadPoolExecutor executor;
     private final AtomicReference<Instant> nextResetReference;
     private final Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory;
+    private final Function<String, String> hashAlgorithm;
 
     private volatile Consumer<String> loggerInfo;
     private volatile BiConsumer<String, Throwable> loggerWarn;
@@ -38,14 +39,16 @@ public class RequestTaggingContext implements Closeable {
     private volatile Function<Instant, RequestTaggingStatusReporter> requestTaggingStatusReporterReference;
 
     public RequestTaggingContext() {
-        this(new RequestTaggingStatusReporterFactory()::build);
+        this(new RequestTaggingStatusReporterFactory()::build, new HashAlgorithm()::hash);
     }
 
-    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory) {
+    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory,
+                                 Function<String, String> hashAlgorithm) {
         nextResetReference = new AtomicReference<>();
         consumer = new DefaultRequestTaggingStatusConsumer();
         executor = new ScheduledThreadPoolExecutor(1);
         this.requestTaggingStatusReporterFactory = Objects.requireNonNull(requestTaggingStatusReporterFactory);
+        this.hashAlgorithm = hashAlgorithm;
 
         loggerInfo = System.out::println;
         loggerWarn = (message, throwable) -> {
@@ -94,7 +97,7 @@ public class RequestTaggingContext implements Closeable {
     }
 
     public RequestTaggingRunnable taggingRunnable(Runnable runnable) {
-        DefaultRequestTaggingStatus status = new DefaultRequestTaggingStatus(consumer);
+        DefaultRequestTaggingStatus status = new DefaultRequestTaggingStatus(consumer, hashAlgorithm);
         return new RequestTaggingRunnable(runnable, status);
     }
 

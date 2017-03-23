@@ -36,10 +36,10 @@ public class DefaultRequestTaggingStatusConsumerTest {
     @Test
     public void testCollectAndConsume() {
         DefaultRequestTaggingStatusConsumer consumer = defaultRequestTaggingStatusConsumer();
-        new DefaultRequestTaggingStatus(consumer).serverError().withMetaData("B", "b1").withMetaData("A", "a1").consume();
-        new DefaultRequestTaggingStatus(consumer).serverError().withMetaData("B", "b1").withMetaData("A", "a1").consume();
-        new DefaultRequestTaggingStatus(consumer).clientError().withMetaData("A", "a1").consume();
-        new DefaultRequestTaggingStatus(consumer).success().consume();
+        new DefaultRequestTaggingStatus(consumer, x -> x).serverError().withMetaData("B", "b1").withMetaData("A", "a1").consume();
+        new DefaultRequestTaggingStatus(consumer, x -> x).serverError().withMetaData("B", "b1").withMetaData("A", "a1").consume();
+        new DefaultRequestTaggingStatus(consumer, x -> x).clientError().withMetaData("A", "a1").consume();
+        new DefaultRequestTaggingStatus(consumer, x -> x).success().consume();
         
         consumer.report(reporter);
         verify(reporter ,times(3)).accept(resourceNameCaptor.capture(), statusCodeCaptor.capture(), metaDataCaptor.capture());

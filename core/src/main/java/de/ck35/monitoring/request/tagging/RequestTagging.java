@@ -166,7 +166,7 @@ public class RequestTagging {
         }
         @Override
         public Status withHashedMetaData(String key, String value) {
-            return null;
+            return this;
         }
         @Override
         public Status success() {

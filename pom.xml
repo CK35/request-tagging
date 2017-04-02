@@ -41,6 +41,7 @@
         <module>core</module>
         <module>integration-filter</module>
         <module>integration-tomcat</module>
+        <module>testing</module>
     </modules>
 
     <build>

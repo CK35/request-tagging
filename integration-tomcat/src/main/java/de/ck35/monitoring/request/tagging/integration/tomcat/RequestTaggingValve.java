@@ -54,7 +54,7 @@ public class RequestTaggingValve extends ValveBase {
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
         try {
-            context.taggingRunnable(() -> {
+            context.runWithinContext(() -> {
                 try {
                     next.invoke(request, response);
                 } catch (IOException e) {
@@ -62,7 +62,7 @@ public class RequestTaggingValve extends ValveBase {
                 } catch (ServletException e) {
                     throw new UncheckedServletException(e);
                 }
-            }).run();
+            });
         } catch (UncheckedIOException e) {
             throw e.getCause();
         } catch (UncheckedServletException e) {
@@ -114,6 +114,17 @@ public class RequestTaggingValve extends ValveBase {
 
     public void setHashAlgorithmName(String hashAlgorithmName) {
         hashAlgorithm.setAlgorithmName(hashAlgorithmName);
+    }
+    
+    
+    public void setDefaultRequestTaggingStatusIgnored(boolean defaultRequestTaggingStatusIgnored) {
+        context.getDefaultRequestTaggingStatus().setIgnored(defaultRequestTaggingStatusIgnored);
+    }
+    public void setDefaultRequestTaggingStatusResourceName(String defaultRequestTaggingStatusResourceName) {
+        context.getDefaultRequestTaggingStatus().setResourceName(defaultRequestTaggingStatusResourceName);
+    }
+    public void setDefaultRequestTaggingStatusCode(String defaultRequestTaggingStatusCode) {
+        context.getDefaultRequestTaggingStatus().setStatusCode(defaultRequestTaggingStatusCode);
     }
     
     private static class UncheckedServletException extends RuntimeException {

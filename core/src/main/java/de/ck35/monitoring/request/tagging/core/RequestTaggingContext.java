@@ -24,32 +24,34 @@ import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusRepo
  */
 public class RequestTaggingContext implements Closeable {
 
-    private final DefaultRequestTaggingStatusConsumer consumer;
+    private final DefaultRequestTaggingStatusConsumer statusConsumer;
     private final ScheduledThreadPoolExecutor executor;
     private final AtomicReference<Instant> nextResetReference;
     private final Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory;
-    private final Function<String, String> hashAlgorithm;
+    private final DefaultRequestTaggingStatus defaultStatus;
 
     private volatile Consumer<String> loggerInfo;
     private volatile BiConsumer<String, Throwable> loggerWarn;
-
+ 
     private volatile Clock clock;
     private volatile Duration collectorSendDelayDuration;
     private volatile Duration collectorResetDelayDuration;
     private volatile Function<Instant, RequestTaggingStatusReporter> requestTaggingStatusReporterReference;
 
     public RequestTaggingContext() {
-        this(new RequestTaggingStatusReporterFactory()::build, new HashAlgorithm()::hash);
+        this(new RequestTaggingStatusReporterFactory()::build);
     }
-
+    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory) {
+        this(requestTaggingStatusReporterFactory, new HashAlgorithm()::hash);
+    }
     public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory,
                                  Function<String, String> hashAlgorithm) {
-        nextResetReference = new AtomicReference<>();
-        consumer = new DefaultRequestTaggingStatusConsumer();
+        statusConsumer = new DefaultRequestTaggingStatusConsumer();
         executor = new ScheduledThreadPoolExecutor(1);
+        nextResetReference = new AtomicReference<>();
         this.requestTaggingStatusReporterFactory = Objects.requireNonNull(requestTaggingStatusReporterFactory);
-        this.hashAlgorithm = hashAlgorithm;
-
+        defaultStatus = new DefaultRequestTaggingStatus(statusConsumer, hashAlgorithm);
+        
         loggerInfo = System.out::println;
         loggerWarn = (message, throwable) -> {
             System.out.println(message);
@@ -74,6 +76,14 @@ public class RequestTaggingContext implements Closeable {
         executor.scheduleWithFixedDelay(this::send, startDelay, collectorSendDelayDuration.toMillis(), TimeUnit.MILLISECONDS);
     }
 
+    public void runWithinContext(Runnable runnable) {
+        taggingRunnable(runnable).run();
+    }
+    
+    public RequestTaggingRunnable taggingRunnable(Runnable runnable) {
+        return new RequestTaggingRunnable(runnable, new DefaultRequestTaggingStatus(defaultStatus));
+    }
+    
     @Override
     public void close() {
         loggerInfo.accept("Shutting down request tagging context.");
@@ -86,21 +96,16 @@ public class RequestTaggingContext implements Closeable {
             RequestTaggingStatusReporter reporter = requestTaggingStatusReporterReference.apply(now);
             Instant nextReset = nextResetReference.getAndUpdate(reset -> now.isAfter(reset) ? now.plus(collectorResetDelayDuration) : reset);
             if (now.isAfter(nextReset)) {
-                consumer.reportAndReset(reporter);
+                statusConsumer.reportAndReset(reporter);
             } else {
-                consumer.report(reporter);
+                statusConsumer.report(reporter);
             }
             reporter.commit();
         } catch (RuntimeException e) {
             loggerWarn.accept("Error while sending request tagging data!", e);
         }
     }
-
-    public RequestTaggingRunnable taggingRunnable(Runnable runnable) {
-        DefaultRequestTaggingStatus status = new DefaultRequestTaggingStatus(consumer, hashAlgorithm);
-        return new RequestTaggingRunnable(runnable, status);
-    }
-
+    
     public void setLoggerInfo(Consumer<String> loggerInfo) {
         this.loggerInfo = Objects.requireNonNull(loggerInfo, "Can not set loggerInfo to null!");
     }
@@ -130,5 +135,9 @@ public class RequestTaggingContext implements Closeable {
 
     public Duration getCollectorResetDelayDuration() {
         return collectorResetDelayDuration;
+    }
+    
+    public DefaultRequestTaggingStatus getDefaultRequestTaggingStatus() {
+        return defaultStatus;
     }
 }

@@ -56,9 +56,7 @@ public class HashAlgorithm {
     static Supplier<MessageDigest> cloningSupplier(MessageDigest messageDigest) {
         return () -> {
             try {
-                synchronized (messageDigest) {
-                    return (MessageDigest) messageDigest.clone();
-                }
+                return (MessageDigest) messageDigest.clone();
             } catch (CloneNotSupportedException e) {
                 throw new RuntimeException("Used cloning supplier but message digest: '" + messageDigest + "' does not support cloning.", e);
             }

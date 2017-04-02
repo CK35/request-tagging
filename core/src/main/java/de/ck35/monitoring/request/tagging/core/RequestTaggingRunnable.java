@@ -1,5 +1,7 @@
 package de.ck35.monitoring.request.tagging.core;
 
+import java.util.Objects;
+
 import de.ck35.monitoring.request.tagging.RequestTagging;
 
 /**
@@ -20,8 +22,8 @@ public class RequestTaggingRunnable implements Runnable {
 
     public RequestTaggingRunnable(Runnable runnable,
                                   RequestTagging.Status status) {
-        this.runnable = runnable;
-        this.status = status;
+        this.runnable = Objects.requireNonNull(runnable);
+        this.status = Objects.requireNonNull(status);
     }
     
     @Override

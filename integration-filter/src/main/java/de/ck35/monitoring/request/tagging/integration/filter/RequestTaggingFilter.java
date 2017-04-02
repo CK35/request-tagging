@@ -15,6 +15,7 @@ import javax.servlet.ServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus;
 import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
@@ -44,7 +45,7 @@ public class RequestTaggingFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         try {
-            context.taggingRunnable(() -> {
+            context.runWithinContext(() -> {
                 try {
                     chain.doFilter(request, response);
                 } catch (IOException e) {
@@ -52,7 +53,7 @@ public class RequestTaggingFilter implements Filter {
                 } catch (ServletException e) {
                     throw new UncheckedServletException(e);
                 }
-            }).run();
+            });
         } catch (UncheckedIOException e) {
             throw e.getCause();
         } catch (UncheckedServletException e) {
@@ -79,6 +80,11 @@ public class RequestTaggingFilter implements Filter {
         
         config.apply("hashAlgorithmName", hashAlgorithm::setAlgorithmName);
 
+        DefaultRequestTaggingStatus defaultRequestTaggingStatus = context.getDefaultRequestTaggingStatus();
+        config.applyBoolean("defaultRequestTaggingStatusIgnored", defaultRequestTaggingStatus::setIgnored);
+        config.apply("defaultRequestTaggingStatusResourceName", defaultRequestTaggingStatus::setResourceName);
+        config.apply("defaultRequestTaggingStatusCode", defaultRequestTaggingStatus::setStatusCode);
+        
         context.initialize();
     }
 

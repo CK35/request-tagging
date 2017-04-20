@@ -14,7 +14,7 @@ public class RequestTaggingTest {
     public void testInit() {
         assertFalse(RequestTagging.getOptional().isPresent());
         assertEquals(RequestTagging.EMPTY_STATUS, RequestTagging.get());
-        DefaultRequestTaggingStatus expectedStatus = new DefaultRequestTaggingStatus(status -> {}, x -> x);
+        DefaultRequestTaggingStatus expectedStatus = new DefaultRequestTaggingStatus(status -> {});
         try {
             RequestTagging.init(expectedStatus);
             assertEquals(expectedStatus, RequestTagging.get());
@@ -37,7 +37,6 @@ public class RequestTaggingTest {
         Runnable expected = () -> {};
         assertEquals(expected, status.handover(expected));
         
-        status.consume();
     }
     
 }

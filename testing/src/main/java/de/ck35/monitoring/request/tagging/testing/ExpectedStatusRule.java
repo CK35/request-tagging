@@ -3,6 +3,7 @@ package de.ck35.monitoring.request.tagging.testing;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,7 +33,7 @@ public class ExpectedStatusRule implements MethodRule {
 
     public ExpectedStatusRule() {
         this.statusList = new ArrayList<>();
-        this.defaultStatus = new DefaultRequestTaggingStatus(statusList::add, new HashAlgorithm()::hash);
+        this.defaultStatus = new DefaultRequestTaggingStatus(statusList::add, new HashAlgorithm()::hash, Clock.systemUTC());
     }
 
     @Override

@@ -1,4 +1,4 @@
-package de.ck35.monitoring.request.tagging.core.reporter.influxdb;
+package de.ck35.monitoring.request.tagging.core.reporter.http;
 
 import static com.xebialabs.restito.builder.stub.StubHttp.whenHttp;
 import static com.xebialabs.restito.builder.verify.VerifyHttp.verifyHttp;
@@ -9,10 +9,7 @@ import static com.xebialabs.restito.semantics.Condition.parameter;
 import static com.xebialabs.restito.semantics.Condition.post;
 import static com.xebialabs.restito.semantics.Condition.uri;
 import static com.xebialabs.restito.semantics.Condition.withPostBodyContaining;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.verify;
 
-import java.io.UncheckedIOException;
 import java.time.Instant;
 
 import org.glassfish.grizzly.http.Method;
@@ -22,14 +19,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedMap;
 import com.xebialabs.restito.server.StubServer;
 
-import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus.StatusCode;
+import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
+import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Measurement;
+import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
-import de.ck35.monitoring.request.tagging.core.reporter.influxdb.InfluxDB.Reporter;
+import de.ck35.monitoring.request.tagging.core.reporter.http.StreamingHttpReporter.HttpTransferException;
 
-public class InfluxDBTest {
+public class StreamingHttpReporterIntegrationTest {
 
     private static final Instant TIMESTAMP = Instant.parse("2007-12-03T10:15:30.00Z");
 
@@ -60,9 +60,9 @@ public class InfluxDBTest {
         requestTaggingStatusReporterFactory.setInfluxDBDatabaseName("test-db");
     }
 
-    public InfluxDB.Reporter reporter() {
-        return (InfluxDB.Reporter) requestTaggingStatusReporterFactory.build()
-                                                                      .apply(TIMESTAMP);
+    public RequestTaggingStatusReporter reporter() {
+        return requestTaggingStatusReporterFactory.build()
+                                                  .apply(TIMESTAMP);
     }
 
     @Test
@@ -70,9 +70,9 @@ public class InfluxDBTest {
         whenHttp(server).match(post("/write"))
                         .then(noContent());
 
-        Reporter reporter = reporter();
-        reporter.accept("my-test-resource", ImmutableMap.of("SUCCESS", 10L), ImmutableMap.of("my-key", "my-value"));
-        reporter.commit();
+        try (RequestTaggingStatusReporter reporter = reporter()) {
+            reporter.accept(new Resource("my-test-resource", ImmutableSortedMap.of("my-key", "my-value"), ImmutableList.of(new Measurement("SUCCESS", 10L, null))));
+        }
 
         verifyHttp(server).once(method(Method.POST),
                                 uri("/write"),
@@ -80,25 +80,14 @@ public class InfluxDBTest {
                                 withPostBodyContaining("request_data,resource_name=\"my-test-resource\",host=\"my-test-host\",instanceId=\"a\",my-key=\"my-value\" SUCCESS=10 1196676930000000000"));
     }
 
-    @Test
-    public void testSendEmptyToInfluxDB() throws Exception {
-        whenHttp(server).match(post("/write"))
-                        .then(noContent());
-
-        Reporter reporter = reporter();
-        reporter.commit();
-
-        verifyHttp(server).never(method(Method.POST), uri("/write"));
-    }
-
-    @Test(expected = UncheckedIOException.class)
+    @Test(expected = HttpTransferException.class)
     public void testSendToInfluxDBWrongReturnCode() throws Exception {
         whenHttp(server).match(post("/write"))
                         .then(status(HttpStatus.BAD_REQUEST_400));
 
-        Reporter reporter = reporter();
-        reporter.accept("my-test-resource", ImmutableMap.of("SUCCESS", 10L), ImmutableMap.of("my-key", "my-value"));
-        reporter.commit();
+        try (RequestTaggingStatusReporter reporter = reporter()) {
+            reporter.accept(new Resource("my-test-resource", ImmutableSortedMap.of("my-key", "my-value"), ImmutableList.of(new Measurement("SUCCESS", 10L, null))));
+        }
     }
 
 }

@@ -2,6 +2,7 @@ package de.ck35.monitoring.request.tagging.integration.filter;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Clock;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus;
+import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatusConsumer;
 import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
@@ -33,11 +35,13 @@ public class RequestTaggingFilter implements Filter {
     private final RequestTaggingContext context;
     private final RequestTaggingStatusReporterFactory statusReporterFactory;
     private final HashAlgorithm hashAlgorithm;
+    private final Clock stopWatchClock;
 
     public RequestTaggingFilter() {
         statusReporterFactory = new RequestTaggingStatusReporterFactory();
         hashAlgorithm = new HashAlgorithm();
-        context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash);
+        stopWatchClock = Clock.systemUTC();
+        context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash, stopWatchClock);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
     }
@@ -65,7 +69,6 @@ public class RequestTaggingFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         FilterConfigWrapper config = new FilterConfigWrapper(filterConfig);
         config.apply("collectorSendDelayDuration", context::setCollectorSendDelayDuration);
-        config.apply("collectorResetDelayDuration", context::setCollectorResetDelayDuration);
         config.apply("localHostName", statusReporterFactory::setLocalHostName);
         config.apply("localInstanceId", statusReporterFactory::setLocalInstanceId);
 
@@ -84,6 +87,9 @@ public class RequestTaggingFilter implements Filter {
         config.applyBoolean("defaultRequestTaggingStatusIgnored", defaultRequestTaggingStatus::setIgnored);
         config.apply("defaultRequestTaggingStatusResourceName", defaultRequestTaggingStatus::setResourceName);
         config.apply("defaultRequestTaggingStatusCode", defaultRequestTaggingStatus::setStatusCode);
+        
+        DefaultRequestTaggingStatusConsumer statusConsumer = context.getStatusConsumer();
+        config.applyInt("maxDurationsPerNode", statusConsumer::setMaxDurationsPerNode);
         
         context.initialize();
     }

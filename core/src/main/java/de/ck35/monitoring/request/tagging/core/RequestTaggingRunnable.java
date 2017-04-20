@@ -18,10 +18,10 @@ public class RequestTaggingRunnable implements Runnable {
     private static final String EXCEPTION_CAUSE_KEY = "serverErrorCause";
     
     private final Runnable runnable;
-    private final RequestTagging.Status status;
+    private final DefaultRequestTaggingStatus status;
 
     public RequestTaggingRunnable(Runnable runnable,
-                                  RequestTagging.Status status) {
+                                  DefaultRequestTaggingStatus status) {
         this.runnable = Objects.requireNonNull(runnable);
         this.status = Objects.requireNonNull(status);
     }
@@ -30,12 +30,14 @@ public class RequestTaggingRunnable implements Runnable {
     public void run() {
         RequestTagging.init(status);
         try {
+            status.startTimer(RequestTagging.Status.DEFAULT_TIMER_KEY);
             try {                
                 runnable.run();
             } catch(RuntimeException e) {                
                 tagServerError(status, e);
                 throw e;
-            } finally {                
+            } finally {
+                status.stopTimer(RequestTagging.Status.DEFAULT_TIMER_KEY);
                 status.consume();
             }
         } finally {

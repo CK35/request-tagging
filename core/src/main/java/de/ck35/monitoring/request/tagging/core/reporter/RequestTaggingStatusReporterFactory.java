@@ -1,14 +1,18 @@
 package de.ck35.monitoring.request.tagging.core.reporter;
 
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import de.ck35.monitoring.request.tagging.core.reporter.influxdb.InfluxDB;
+import de.ck35.monitoring.request.tagging.core.reporter.http.InfluxDBWriteStrategy;
+import de.ck35.monitoring.request.tagging.core.reporter.http.StreamingHttpReporter;
 
 /**
  * Factory which creates the different request tagging status reporters.
@@ -125,10 +129,25 @@ public class RequestTaggingStatusReporterFactory {
             }
             
             loggerInfo.accept("Using InfluxDB: '" + influxDBHostName + ":" + influxDBPort + "' for request tagging data reporting.");
-            return new InfluxDB(localHostName, localInstanceId, influxDBProtocol, influxDBHostName, influxDBPort, influxDBDatabaseName, connectionTimeout, readTimeout)::reporter;
+            return new StreamingHttpReporter(influxDBURL(), connectionTimeout, readTimeout, InfluxDBWriteStrategy.writeStrategy(localHostName, localInstanceId));
         } else {
             loggerInfo.accept("Could not create request tagging data reporter. Falling back to default.");
             return DefaultReporter.forLogger(loggerInfo);
+        }
+    }
+    
+    private URL influxDBURL() {
+        try {
+            String scheme = influxDBProtocol;
+            String userInfo = null;
+            String host = influxDBHostName;
+            int port = Integer.valueOf(influxDBPort);
+            String path = "/write";
+            String query = "db=" + influxDBDatabaseName;
+            String fragment = null;
+            return new URI(scheme, userInfo, host, port, path, query, fragment).toURL();
+        } catch (NumberFormatException | URISyntaxException | MalformedURLException e) {
+            throw new IllegalArgumentException("Can not create InfluxDB url!", e);
         }
     }
 
@@ -143,13 +162,8 @@ public class RequestTaggingStatusReporterFactory {
         }
 
         @Override
-        public void accept(String resourceName, Map<String, Long> statusCodeCounters, Map<String, String> metaData) {
-            logger.accept("Request Data: [" + instant.toString() + "] " + resourceName + ": " + statusCodeCounters + " - " + metaData);
-        }
-
-        @Override
-        public void commit() {
-            // Ignore because already logged data
+        public void accept(Resource resource) {
+            logger.accept(instant.toString() + ": " + resource.toString());
         }
 
         public static Function<Instant, RequestTaggingStatusReporter> forLogger(Consumer<String> logger) {

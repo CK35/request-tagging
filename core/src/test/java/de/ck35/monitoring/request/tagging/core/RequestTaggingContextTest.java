@@ -1,6 +1,9 @@
 package de.ck35.monitoring.request.tagging.core;
 
+import static de.ck35.monitoring.request.tagging.core.ExpectedMeasurement.measurement;
+import static de.ck35.monitoring.request.tagging.core.ExpectedResource.resource;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -20,48 +23,45 @@ import java.util.function.Supplier;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
-
 import de.ck35.monitoring.request.tagging.RequestTagging;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
+import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
 
 @RunWith(MockitoJUnitRunner.class)
 public class RequestTaggingContextTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(RequestTaggingContextTest.class);
-    
+
     private Supplier<Function<Instant, RequestTaggingStatusReporter>> defaultRequestTaggingStatusReporterSupplier;
-    private HashAlgorithm hashAlgorithm;
     private String collectorSendDelayDuration;
-    private String collectorResetDelayDuration;
 
     @Mock RequestTaggingStatusReporter requestTaggingStatusReporter;
     @Mock Function<Instant, RequestTaggingStatusReporter> defaultRequestTaggingStatusReporter;
+    @Captor ArgumentCaptor<Resource> resourceCaptor;
 
     @Before
     public void before() {
         collectorSendDelayDuration = "PT1s";
-        collectorResetDelayDuration = "PT1M";
         when(defaultRequestTaggingStatusReporter.apply(any())).thenReturn(requestTaggingStatusReporter);
         defaultRequestTaggingStatusReporterSupplier = () -> defaultRequestTaggingStatusReporter;
-        hashAlgorithm = new HashAlgorithm();
     }
 
     public RequestTaggingContext requestTaggingContext() {
-        RequestTaggingContext context = new RequestTaggingContext(defaultRequestTaggingStatusReporterSupplier, hashAlgorithm::hash);
+        RequestTaggingContext context = new RequestTaggingContext(defaultRequestTaggingStatusReporterSupplier);
         context.setCollectorSendDelayDuration(collectorSendDelayDuration);
-        context.setCollectorResetDelayDuration(collectorResetDelayDuration);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
         context.initialize();
         return context;
     }
-    
+
     @Test
     public void testSuccess() {
         try (RequestTaggingContext context = requestTaggingContext()) {
@@ -69,11 +69,17 @@ public class RequestTaggingContextTest {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .withMetaData("test-key", "test-value");
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-resource", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of("test-key", "test-value"));
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("test-resource")
+                                                            .withMetaData("test-key", "test-value")
+                                                            .withMeasurement(measurement().withStatusCodeName("SUCCESS")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     public void testSuccessWithHashedValues() {
         try (RequestTaggingContext context = requestTaggingContext()) {
@@ -81,11 +87,17 @@ public class RequestTaggingContextTest {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .withHashedMetaData("test-key", "test-value");
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-resource", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of("test-key", "83B3C112B82DCCA8376DA029E8101BCC"));
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("test-resource")
+                                                            .withMetaData("test-key", "83B3C112B82DCCA8376DA029E8101BCC")
+                                                            .withMeasurement(measurement().withStatusCodeName("SUCCESS")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     public void testClientError() {
         try (RequestTaggingContext context = requestTaggingContext()) {
@@ -93,11 +105,16 @@ public class RequestTaggingContextTest {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .clientError();
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-resource", ImmutableMap.of("CLIENT_ERROR", 1L), ImmutableMap.of());
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("test-resource")
+                                                            .withMeasurement(measurement().withStatusCodeName("CLIENT_ERROR")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     public void testServerError() {
         try (RequestTaggingContext context = requestTaggingContext()) {
@@ -105,8 +122,13 @@ public class RequestTaggingContextTest {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .serverError();
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-resource", ImmutableMap.of("SERVER_ERROR", 1L), ImmutableMap.of());
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("test-resource")
+                                                            .withMeasurement(measurement().withStatusCodeName("SERVER_ERROR")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
 
@@ -117,15 +139,21 @@ public class RequestTaggingContextTest {
                 RequestTagging.get()
                               .withResourceName("test-ignore")
                               .ignore();
-            }).run();
+            })
+                   .run();
             context.taggingRunnable(() -> {
                 RequestTagging.get()
                               .withResourceName("test-success");
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-success", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of());
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("test-success")
+                                                            .withMeasurement(measurement().withStatusCodeName("SUCCESS")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     public void testHeed() {
         try (RequestTaggingContext context = requestTaggingContext()) {
@@ -134,11 +162,16 @@ public class RequestTaggingContextTest {
                               .withResourceName("test-heed")
                               .ignore()
                               .heed();
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("test-heed", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of());
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("test-heed")
+                                                            .withMeasurement(measurement().withStatusCodeName("SUCCESS")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     public void testDefaultErrorOnRuntimeException() {
         try (RequestTaggingContext context = requestTaggingContext()) {
@@ -146,14 +179,20 @@ public class RequestTaggingContextTest {
             try {
                 context.taggingRunnable(() -> {
                     throw test;
-                }).run();
-            } catch(RuntimeException e) {
+                })
+                       .run();
+            } catch (RuntimeException e) {
                 assertEquals(test, e);
             }
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("default", ImmutableMap.of("SERVER_ERROR", 1L), ImmutableMap.of("serverErrorCause", "java.lang.RuntimeException"));
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("default")
+                                                            .withMetaData("serverErrorCause", "java.lang.RuntimeException")
+                                                            .withMeasurement(measurement().withStatusCodeName("SERVER_ERROR")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     @SuppressWarnings("unchecked")
     public void testReportingFails() {
@@ -161,45 +200,40 @@ public class RequestTaggingContextTest {
         try (RequestTaggingContext context = requestTaggingContext()) {
             context.setLoggerWarn(loggerWarn);
             RuntimeException test = new RuntimeException("test");
-            doThrow(test).when(requestTaggingStatusReporter).accept("error-while-reporting", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of());
+            doThrow(test).when(requestTaggingStatusReporter)
+                         .accept(any(Resource.class));
+
             context.taggingRunnable(() -> {
-                RequestTagging.get().withResourceName("error-while-reporting");
-            }).run();
+                RequestTagging.get()
+                              .withResourceName("error-while-reporting");
+            })
+                   .run();
             verify(loggerWarn, timeout(10_000)).accept("Error while sending request tagging data!", test);
+            reset(requestTaggingStatusReporter);
+
             context.taggingRunnable(() -> {
-                RequestTagging.get().withResourceName("no-error-while-reporting");
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("no-error-while-reporting", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of());
+                RequestTagging.get()
+                              .withResourceName("no-error-while-reporting");
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            assertThat(resourceCaptor.getValue(), resource().withName("no-error-while-reporting")
+                                                            .withMeasurement(measurement().withStatusCodeName("SUCCESS")
+                                                                                          .withTotalNumberOfInvocations(1))
+                                                            .matches());
         }
     }
-    
+
     @Test
     public void testDefaultSettings() {
         try (RequestTaggingContext context = new RequestTaggingContext()) {
             context.initialize();
             assertEquals(Duration.ofMinutes(1), context.getCollectorSendDelayDuration());
-            assertEquals(Duration.ofDays(1), context.getCollectorResetDelayDuration());
-            
-            LocalDateTime timestamp = LocalDateTime.now(context.getClock());
+
+            LocalDateTime timestamp = LocalDateTime.now(context.getSendIntervalClock());
             assertEquals(0, timestamp.get(ChronoField.SECOND_OF_MINUTE));
             assertEquals(0, timestamp.get(ChronoField.MILLI_OF_SECOND));
         }
     }
-    
-    @Test
-    public void testSendWithReset() {
-        collectorSendDelayDuration = "PT2s";
-        collectorResetDelayDuration = "PT1s";
-        try(RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("default", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of());
-            reset(requestTaggingStatusReporter);
-            context.taggingRunnable(() -> {
-            }).run();
-            verify(requestTaggingStatusReporter, timeout(10_000)).accept("default", ImmutableMap.of("SUCCESS", 1L), ImmutableMap.of());
-        }
-    }
-    
 
 }

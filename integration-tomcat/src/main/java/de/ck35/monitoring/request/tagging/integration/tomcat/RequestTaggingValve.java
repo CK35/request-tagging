@@ -2,6 +2,7 @@ package de.ck35.monitoring.request.tagging.integration.tomcat;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Clock;
 
 import javax.servlet.ServletException;
 
@@ -29,12 +30,14 @@ public class RequestTaggingValve extends ValveBase {
     private final RequestTaggingContext context;
     private final RequestTaggingStatusReporterFactory statusReporterFactory;
     private final HashAlgorithm hashAlgorithm;
+    private final Clock stopWatchClock;
 
     public RequestTaggingValve() {
         super(true);
         statusReporterFactory = new RequestTaggingStatusReporterFactory();
         hashAlgorithm = new HashAlgorithm();
-        context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash);
+        stopWatchClock = Clock.systemUTC();
+        context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash, stopWatchClock);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
     }
@@ -79,9 +82,6 @@ public class RequestTaggingValve extends ValveBase {
     public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
         context.setCollectorSendDelayDuration(collectorSendDelayDuration);
     }
-    public void setCollectorResetDelayDuration(String collectorResetDelayDuration) {
-        context.setCollectorResetDelayDuration(collectorResetDelayDuration);
-    }
     public void setLocalHostName(String localHostName) {
         statusReporterFactory.setLocalHostName(localHostName);
     }
@@ -125,6 +125,10 @@ public class RequestTaggingValve extends ValveBase {
     }
     public void setDefaultRequestTaggingStatusCode(String defaultRequestTaggingStatusCode) {
         context.getDefaultRequestTaggingStatus().setStatusCode(defaultRequestTaggingStatusCode);
+    }
+    
+    public void setMaxDurationsPerNode(int maxDurationsPerNode) {
+        context.getStatusConsumer().setMaxDurationsPerNode(maxDurationsPerNode);
     }
     
     private static class UncheckedServletException extends RuntimeException {

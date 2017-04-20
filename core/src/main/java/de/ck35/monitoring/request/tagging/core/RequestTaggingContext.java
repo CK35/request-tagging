@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -26,32 +25,30 @@ public class RequestTaggingContext implements Closeable {
 
     private final DefaultRequestTaggingStatusConsumer statusConsumer;
     private final ScheduledThreadPoolExecutor executor;
-    private final AtomicReference<Instant> nextResetReference;
     private final Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory;
     private final DefaultRequestTaggingStatus defaultStatus;
 
     private volatile Consumer<String> loggerInfo;
     private volatile BiConsumer<String, Throwable> loggerWarn;
- 
-    private volatile Clock clock;
+
+    private volatile Clock sendIntervalClock;
     private volatile Duration collectorSendDelayDuration;
-    private volatile Duration collectorResetDelayDuration;
     private volatile Function<Instant, RequestTaggingStatusReporter> requestTaggingStatusReporterReference;
 
     public RequestTaggingContext() {
         this(new RequestTaggingStatusReporterFactory()::build);
     }
+
     public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory) {
-        this(requestTaggingStatusReporterFactory, new HashAlgorithm()::hash);
+        this(requestTaggingStatusReporterFactory, new HashAlgorithm()::hash, Clock.systemUTC());
     }
-    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory,
-                                 Function<String, String> hashAlgorithm) {
-        statusConsumer = new DefaultRequestTaggingStatusConsumer();
-        executor = new ScheduledThreadPoolExecutor(1);
-        nextResetReference = new AtomicReference<>();
+
+    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory, Function<String, String> hashAlgorithm, Clock measurementClock) {
         this.requestTaggingStatusReporterFactory = Objects.requireNonNull(requestTaggingStatusReporterFactory);
-        defaultStatus = new DefaultRequestTaggingStatus(statusConsumer, hashAlgorithm);
-        
+        this.statusConsumer = new DefaultRequestTaggingStatusConsumer();
+        defaultStatus = new DefaultRequestTaggingStatus(statusConsumer, hashAlgorithm, measurementClock);
+        executor = new ScheduledThreadPoolExecutor(1);
+
         loggerInfo = System.out::println;
         loggerWarn = (message, throwable) -> {
             System.out.println(message);
@@ -59,7 +56,6 @@ public class RequestTaggingContext implements Closeable {
         };
 
         setCollectorSendDelayDuration("PT1M");
-        setCollectorResetDelayDuration("P1D");
     }
 
     public void initialize() {
@@ -68,9 +64,9 @@ public class RequestTaggingContext implements Closeable {
         requestTaggingStatusReporterReference = requestTaggingStatusReporterFactory.get();
 
         loggerInfo.accept("Scheduling send process for request tagging data with delay of '" + collectorSendDelayDuration + "'.");
-        long startDelay = Math.max(0, clock.instant()
-                                           .plus(collectorSendDelayDuration)
-                                           .toEpochMilli()
+        long startDelay = Math.max(0, sendIntervalClock.instant()
+                                               .plus(collectorSendDelayDuration)
+                                               .toEpochMilli()
                 - Instant.now()
                          .toEpochMilli());
         executor.scheduleWithFixedDelay(this::send, startDelay, collectorSendDelayDuration.toMillis(), TimeUnit.MILLISECONDS);
@@ -79,11 +75,11 @@ public class RequestTaggingContext implements Closeable {
     public void runWithinContext(Runnable runnable) {
         taggingRunnable(runnable).run();
     }
-    
+
     public RequestTaggingRunnable taggingRunnable(Runnable runnable) {
         return new RequestTaggingRunnable(runnable, new DefaultRequestTaggingStatus(defaultStatus));
     }
-    
+
     @Override
     public void close() {
         loggerInfo.accept("Shutting down request tagging context.");
@@ -92,20 +88,18 @@ public class RequestTaggingContext implements Closeable {
 
     protected void send() {
         try {
-            Instant now = clock.instant();
+            Instant now = sendIntervalClock.instant();
             RequestTaggingStatusReporter reporter = requestTaggingStatusReporterReference.apply(now);
-            Instant nextReset = nextResetReference.getAndUpdate(reset -> now.isAfter(reset) ? now.plus(collectorResetDelayDuration) : reset);
-            if (now.isAfter(nextReset)) {
-                statusConsumer.reportAndReset(reporter);
-            } else {
+            try {
                 statusConsumer.report(reporter);
+            } finally {                
+                reporter.close();
             }
-            reporter.commit();
         } catch (RuntimeException e) {
             loggerWarn.accept("Error while sending request tagging data!", e);
         }
     }
-    
+
     public void setLoggerInfo(Consumer<String> loggerInfo) {
         this.loggerInfo = Objects.requireNonNull(loggerInfo, "Can not set loggerInfo to null!");
     }
@@ -114,29 +108,23 @@ public class RequestTaggingContext implements Closeable {
         this.loggerWarn = Objects.requireNonNull(loggerWarn, "Can not set loggerWarn to null!");
     }
 
-    public Clock getClock() {
-        return clock;
+    public Clock getSendIntervalClock() {
+        return sendIntervalClock;
     }
 
     public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
         this.collectorSendDelayDuration = Duration.parse(collectorSendDelayDuration);
-        this.clock = Clock.tick(Clock.systemUTC(), this.collectorSendDelayDuration);
+        this.sendIntervalClock = Clock.tick(Clock.systemUTC(), this.collectorSendDelayDuration);
     }
 
     public Duration getCollectorSendDelayDuration() {
         return collectorSendDelayDuration;
     }
 
-    public void setCollectorResetDelayDuration(String collectorResetDelayDuration) {
-        this.collectorResetDelayDuration = Duration.parse(collectorResetDelayDuration);
-        this.nextResetReference.set(clock.instant()
-                                         .plus(this.collectorResetDelayDuration));
+    public DefaultRequestTaggingStatusConsumer getStatusConsumer() {
+        return statusConsumer;
     }
 
-    public Duration getCollectorResetDelayDuration() {
-        return collectorResetDelayDuration;
-    }
-    
     public DefaultRequestTaggingStatus getDefaultRequestTaggingStatus() {
         return defaultStatus;
     }

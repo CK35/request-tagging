@@ -1,0 +1,6 @@
+request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value" SUCCESS=5,CLIENT_ERROR=6 1196676930000000000
+request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value",statusCodeName="SUCCESS",uniqueDurationIndex="0" total_request_duration=10 1196676930000000000
+request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value",statusCodeName="SUCCESS",uniqueDurationIndex="1" total_request_duration=11 1196676930000000000
+request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value",statusCodeName="SUCCESS",uniqueDurationIndex="2" total_request_duration=12 1196676930000000000
+request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value",statusCodeName="CLIENT_ERROR",uniqueDurationIndex="0" total_request_duration=13 1196676930000000000
+request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value",statusCodeName="CLIENT_ERROR",uniqueDurationIndex="1" total_request_duration=14 1196676930000000000

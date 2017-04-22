@@ -1,11 +1,13 @@
 package de.ck35.monitoring.request.tagging.core.reporter.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
 
@@ -19,6 +21,7 @@ import com.google.common.io.ByteStreams;
 
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Measurement;
 import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
+import de.ck35.monitoring.request.tagging.core.reporter.http.InfluxDBWriteStrategy.Line;
 
 public class InfluxDBWriteStrategyTest {
 
@@ -36,9 +39,28 @@ public class InfluxDBWriteStrategyTest {
         return (InfluxDBWriteStrategy) InfluxDBWriteStrategy.writeStrategy(hostId, instanceId)
                                                             .apply(instant);
     }
+    
+    public Line line() {
+        return new Line(instant);
+    }
 
     @Test
     public void testWrite() throws Exception {
+        StringBuilder result = new StringBuilder();
+        Measurement m1 = new Measurement("SUCCESS", 5, Collections.emptyMap());
+        Measurement m2 = new Measurement("CLIENT_ERROR", 6, Collections.emptyMap());
+        List<Measurement> measurements = ImmutableList.of(m1, m2);
+        SortedMap<String, String> metaData = ImmutableSortedMap.of("my-meta-data-key", "my-meta-data-value");
+        String name = "my-test-resource";
+        Resource resource = new Resource(name, metaData, measurements);
+        
+        influxDBWriteStrategy().write(resource, result::append);
+
+        assertEqualsContent("/InfluxDBWriteStrategyTest_Expected.txt", result.toString());
+    }
+    
+    @Test
+    public void testWriteWithDurations() throws Exception {
         StringBuilder result = new StringBuilder();
         Measurement m1 = new Measurement("SUCCESS", 5, ImmutableMap.of("total_request_duration", ImmutableList.of(Duration.ofMillis(10), Duration.ofMillis(11), Duration.ofMillis(12))));
         Measurement m2 = new Measurement("CLIENT_ERROR", 6, ImmutableMap.of("total_request_duration", ImmutableList.of(Duration.ofMillis(13), Duration.ofMillis(14))));
@@ -46,12 +68,15 @@ public class InfluxDBWriteStrategyTest {
         SortedMap<String, String> metaData = ImmutableSortedMap.of("my-meta-data-key", "my-meta-data-value");
         String name = "my-test-resource";
         Resource resource = new Resource(name, metaData, measurements);
-        InfluxDBWriteStrategy strategy = influxDBWriteStrategy();
-        strategy.write(resource, result::append);
+        
+        influxDBWriteStrategy().write(resource, result::append);
 
-        String actual = result.toString();
+        assertEqualsContent("/InfluxDBWriteStrategyTest_Expected_with_durations.txt", result.toString());
+    }
+
+    private static void assertEqualsContent(String expectedResourceLocation, String actual) throws IOException {
         String expected;
-        try (InputStream in = getClass().getResourceAsStream("/InfluxDBWriteStrategyTest_Expected.txt")) {
+        try (InputStream in = InfluxDBWriteStrategyTest.class.getResourceAsStream(expectedResourceLocation)) {
             expected = new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8);
         }
         Splitter splitter = Splitter.on("\n");
@@ -62,5 +87,49 @@ public class InfluxDBWriteStrategyTest {
             assertEquals("At index: " + index, expectedList.get(index), actualList.get(index));
         }
     }
+    
+    @Test(expected=IllegalStateException.class)
+    public void testWriteTagAfterField() {
+        Line line = line();
+        failOnIllegalStateException(() -> line.writeField("field-key", 5));
+        line.writeTag("invalid-tag", "value");
+    }
+    
+    @Test(expected=IllegalStateException.class)
+    public void testWriteTagAfterEnd() {
+        Line line = line();
+        failOnIllegalStateException(() -> line.writeField("field-key", 5));
+        failOnIllegalStateException(() -> line.getCompleteLine());
+        line.writeTag("invalid-tag", "value");
+    }
+    
+    @Test(expected=IllegalStateException.class)
+    public void testWriteFieldAfterEnd() {
+        Line line = line();
+        failOnIllegalStateException(() -> line.writeField("field-key", 5));
+        failOnIllegalStateException(() -> line.getCompleteLine());
+        line.writeField("invalid-field", 5);
+    }
+    
+    @Test(expected=IllegalStateException.class)
+    public void testGetCompleteLineBeforeFields() {
+        Line line = line();
+        line.getCompleteLine();
+    }
+    
+    @Test
+    public void testGetCompleteLineTwiceWillResultInSameLine() {
+        Line line = line();
+        line.writeField("field-key", 5);
+        String completeLine = line.getCompleteLine();
+        assertEquals(completeLine, line.getCompleteLine());
+    }
 
+    private static void failOnIllegalStateException(Runnable runnable) {
+        try {            
+            runnable.run();
+        } catch(IllegalStateException e) {
+            fail("IllegalState not expected here!");
+        }
+    }
 }

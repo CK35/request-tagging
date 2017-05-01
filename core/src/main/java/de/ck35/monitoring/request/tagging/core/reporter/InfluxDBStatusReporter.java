@@ -1,32 +1,26 @@
-package de.ck35.monitoring.request.tagging.core.reporter.http;
+package de.ck35.monitoring.request.tagging.core.reporter;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
-import de.ck35.monitoring.request.tagging.core.reporter.http.StreamingHttpReporter.WriteStrategy;
-
-public class InfluxDBWriteStrategy implements StreamingHttpReporter.WriteStrategy {
+public class InfluxDBStatusReporter implements StatusReporter {
 
     private final Instant instant;
     private final Optional<String> hostId;
     private final Optional<String> instanceId;
+    private final Consumer<String> writer;
 
-    public InfluxDBWriteStrategy(Instant instant, String hostId, String instanceId) {
+    public InfluxDBStatusReporter(Instant instant, String hostId, String instanceId, Consumer<String> writer) {
+        this.writer = writer;
         this.instant = Objects.requireNonNull(instant);
         this.hostId = Optional.ofNullable(hostId);
         this.instanceId = Optional.ofNullable(instanceId);
     }
 
-    public static Function<Instant, WriteStrategy> writeStrategy(String hostId, String instanceId) {
-        return instant -> new InfluxDBWriteStrategy(instant, hostId, instanceId);
-    }
-
     @Override
-    public void write(Resource resource, Consumer<String> writer) {
+    public void accept(Resource resource) {
         Line lineWithMetaData = new Line(instant);
         lineWithMetaData.writeTag("resource_name", resource.getName());
         hostId.ifPresent(id -> lineWithMetaData.writeTag("host", id));
@@ -52,7 +46,7 @@ public class InfluxDBWriteStrategy implements StreamingHttpReporter.WriteStrateg
             });
         });
     }
-
+    
     public static class Line {
 
         private enum WritePosition {

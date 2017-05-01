@@ -25,13 +25,13 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import de.ck35.monitoring.request.tagging.RequestTagging;
 import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatusConsumer.MetaDataPair;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Resource;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultRequestTaggingStatusConsumerTest {
 
-    @Mock RequestTaggingStatusReporter reporter;
+    @Mock StatusReporter reporter;
     @Captor ArgumentCaptor<Resource> resourceCaptor;
 
     public DefaultRequestTaggingStatusConsumer defaultRequestTaggingStatusConsumer() {

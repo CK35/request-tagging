@@ -20,10 +20,10 @@ import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus;
 import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatusConsumer;
 import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
 
 /**
- * Enable request tagginig for all requests which are send through this servlet filter.
+ * Enable Request Tagginig for all requests which are send through this servlet filter.
  * 
  * @author Christian Kaspari
  * @since 1.0.0
@@ -33,12 +33,12 @@ public class RequestTaggingFilter implements Filter {
     private static final Logger LOG = LoggerFactory.getLogger(RequestTaggingFilter.class);
 
     private final RequestTaggingContext context;
-    private final RequestTaggingStatusReporterFactory statusReporterFactory;
+    private final StatusReporterFactory statusReporterFactory;
     private final HashAlgorithm hashAlgorithm;
     private final Clock stopWatchClock;
 
     public RequestTaggingFilter() {
-        statusReporterFactory = new RequestTaggingStatusReporterFactory();
+        statusReporterFactory = new StatusReporterFactory();
         hashAlgorithm = new HashAlgorithm();
         stopWatchClock = Clock.systemUTC();
         context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash, stopWatchClock);
@@ -69,14 +69,14 @@ public class RequestTaggingFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         FilterConfigWrapper config = new FilterConfigWrapper(filterConfig);
         config.apply("collectorSendDelayDuration", context::setCollectorSendDelayDuration);
-        config.apply("localHostName", statusReporterFactory::setLocalHostName);
-        config.apply("localInstanceId", statusReporterFactory::setLocalInstanceId);
+        config.apply("hostId", statusReporterFactory::setHostId);
+        config.apply("instanceId", statusReporterFactory::setInstanceId);
 
-        config.applyBoolean("reportToInfluxDB", statusReporterFactory::setReportToInfluxDB);
-        config.apply("influxDBProtocol", statusReporterFactory::setInfluxDBProtocol);
-        config.apply("influxDBHostName", statusReporterFactory::setInfluxDBHostName);
-        config.apply("influxDBPort", statusReporterFactory::setInfluxDBPort);
-        config.apply("influxDBDatabaseName", statusReporterFactory::setInfluxDBDatabaseName);
+//        config.applyBoolean("reportToInfluxDB", statusReporterFactory::setReportToInfluxDB);
+//        config.apply("influxDBProtocol", statusReporterFactory::setInfluxDBProtocol);
+//        config.apply("influxDBHostName", statusReporterFactory::setInfluxDBHostName);
+//        config.apply("influxDBPort", statusReporterFactory::setInfluxDBPort);
+//        config.apply("influxDBDatabaseName", statusReporterFactory::setInfluxDBDatabaseName);
 
         config.applyInt("connectionTimeout", statusReporterFactory::setConnectionTimeout);
         config.applyInt("readTimeout", statusReporterFactory::setReadTimeout);

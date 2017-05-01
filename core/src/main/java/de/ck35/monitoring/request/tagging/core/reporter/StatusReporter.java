@@ -16,7 +16,7 @@ import java.util.SortedMap;
  * @author Christian Kaspari
  * @since 1.0.0
  */
-public interface RequestTaggingStatusReporter extends Closeable {
+public interface StatusReporter extends Closeable {
     
     public static class Resource {
         

@@ -1,23 +1,30 @@
 package de.ck35.monitoring.request.tagging.integration.tomcat;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
-import javax.crypto.CipherInputStream;
-
 import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardContext;
+import org.apache.catalina.startup.Catalina;
 import org.apache.catalina.startup.Tomcat;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class RequestTaggingValveTest {
 
+    @Test
+    @Ignore
+    public void testValve() {
+        Catalina catalina = new Catalina();
+        catalina.setConfigFile(getClass().getResource("/server.xml").getFile());
+        catalina.start();
+        catalina.stop();
+    }
+    
     @Test
     @Ignore
     public void test() throws Exception {

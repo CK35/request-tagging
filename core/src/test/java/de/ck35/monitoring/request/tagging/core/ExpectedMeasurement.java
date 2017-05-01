@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus.StatusCode;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Measurement;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Measurement;
 
 public class ExpectedMeasurement {
     

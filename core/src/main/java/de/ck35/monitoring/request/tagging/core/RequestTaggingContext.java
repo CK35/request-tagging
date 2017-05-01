@@ -12,8 +12,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
 
 /**
  * A reusable context for Request Tagging.
@@ -25,7 +25,7 @@ public class RequestTaggingContext implements Closeable {
 
     private final DefaultRequestTaggingStatusConsumer statusConsumer;
     private final ScheduledThreadPoolExecutor executor;
-    private final Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory;
+    private final Supplier<Function<Instant, StatusReporter>> requestTaggingStatusReporterFactory;
     private final DefaultRequestTaggingStatus defaultStatus;
 
     private volatile Consumer<String> loggerInfo;
@@ -33,17 +33,17 @@ public class RequestTaggingContext implements Closeable {
 
     private volatile Clock sendIntervalClock;
     private volatile Duration collectorSendDelayDuration;
-    private volatile Function<Instant, RequestTaggingStatusReporter> requestTaggingStatusReporterReference;
+    private volatile Function<Instant, StatusReporter> requestTaggingStatusReporterReference;
 
     public RequestTaggingContext() {
-        this(new RequestTaggingStatusReporterFactory()::build);
+        this(new StatusReporterFactory()::build);
     }
 
-    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory) {
+    public RequestTaggingContext(Supplier<Function<Instant, StatusReporter>> requestTaggingStatusReporterFactory) {
         this(requestTaggingStatusReporterFactory, new HashAlgorithm()::hash, Clock.systemUTC());
     }
 
-    public RequestTaggingContext(Supplier<Function<Instant, RequestTaggingStatusReporter>> requestTaggingStatusReporterFactory, Function<String, String> hashAlgorithm, Clock measurementClock) {
+    public RequestTaggingContext(Supplier<Function<Instant, StatusReporter>> requestTaggingStatusReporterFactory, Function<String, String> hashAlgorithm, Clock measurementClock) {
         this.requestTaggingStatusReporterFactory = Objects.requireNonNull(requestTaggingStatusReporterFactory);
         this.statusConsumer = new DefaultRequestTaggingStatusConsumer();
         defaultStatus = new DefaultRequestTaggingStatus(statusConsumer, hashAlgorithm, measurementClock);
@@ -89,7 +89,7 @@ public class RequestTaggingContext implements Closeable {
     protected void send() {
         try {
             Instant now = sendIntervalClock.instant();
-            RequestTaggingStatusReporter reporter = requestTaggingStatusReporterReference.apply(now);
+            StatusReporter reporter = requestTaggingStatusReporterReference.apply(now);
             try {
                 statusConsumer.report(reporter);
             } finally {                

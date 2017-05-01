@@ -31,19 +31,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.ck35.monitoring.request.tagging.RequestTagging;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Resource;
 
 @RunWith(MockitoJUnitRunner.class)
 public class RequestTaggingContextTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(RequestTaggingContextTest.class);
 
-    private Supplier<Function<Instant, RequestTaggingStatusReporter>> defaultRequestTaggingStatusReporterSupplier;
+    private Supplier<Function<Instant, StatusReporter>> defaultRequestTaggingStatusReporterSupplier;
     private String collectorSendDelayDuration;
 
-    @Mock RequestTaggingStatusReporter requestTaggingStatusReporter;
-    @Mock Function<Instant, RequestTaggingStatusReporter> defaultRequestTaggingStatusReporter;
+    @Mock StatusReporter requestTaggingStatusReporter;
+    @Mock Function<Instant, StatusReporter> defaultRequestTaggingStatusReporter;
     @Captor ArgumentCaptor<Resource> resourceCaptor;
 
     @Before

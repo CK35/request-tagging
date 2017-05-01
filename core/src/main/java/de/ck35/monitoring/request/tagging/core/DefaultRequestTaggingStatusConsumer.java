@@ -24,9 +24,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus.StatusCode;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Measurement;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Measurement;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Resource;
 
 /**
  * Default implementation of the request tagging status consumer which counts
@@ -94,7 +94,7 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
         }
     }
 
-    public void report(RequestTaggingStatusReporter reporter) {
+    public void report(StatusReporter reporter) {
         swapTree().values()
                   .forEach(node -> node.report(reporter));
     }
@@ -115,7 +115,7 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
             this.name = name;
         }
 
-        public void report(RequestTaggingStatusReporter reporter) {
+        public void report(StatusReporter reporter) {
             report(name, Collections.emptySortedMap(), reporter);
         }
     }
@@ -130,7 +130,7 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
             this.children = new ConcurrentHashMap<>();
         }
 
-        public void report(String resourceName, SortedMap<String, String> currentMetaData, RequestTaggingStatusReporter reporter) {
+        public void report(String resourceName, SortedMap<String, String> currentMetaData, StatusReporter reporter) {
             List<Measurement> measurements = this.measurements.values()
                                                               .stream()
                                                               .map(MutableMeasurement::toOptionalMeasurement)

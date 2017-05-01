@@ -15,7 +15,8 @@ import org.apache.juli.logging.LogFactory;
 
 import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporterFactory;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory.ReportFormat;
 
 /**
  * Tomcat Valve implementation which adds the request tagging mechanism to all incoming requests. 
@@ -28,13 +29,13 @@ public class RequestTaggingValve extends ValveBase {
     private static final Log LOG = LogFactory.getLog(RequestTaggingValve.class);
 
     private final RequestTaggingContext context;
-    private final RequestTaggingStatusReporterFactory statusReporterFactory;
+    private final StatusReporterFactory statusReporterFactory;
     private final HashAlgorithm hashAlgorithm;
     private final Clock stopWatchClock;
 
     public RequestTaggingValve() {
         super(true);
-        statusReporterFactory = new RequestTaggingStatusReporterFactory();
+        statusReporterFactory = new StatusReporterFactory();
         hashAlgorithm = new HashAlgorithm();
         stopWatchClock = Clock.systemUTC();
         context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash, stopWatchClock);
@@ -82,27 +83,35 @@ public class RequestTaggingValve extends ValveBase {
     public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
         context.setCollectorSendDelayDuration(collectorSendDelayDuration);
     }
-    public void setLocalHostName(String localHostName) {
-        statusReporterFactory.setLocalHostName(localHostName);
+    
+    public void setHostId(String hostId) {
+        statusReporterFactory.setHostId(hostId);
     }
-    public void setLocalInstanceId(String localInstanceId) {
-        statusReporterFactory.setLocalInstanceId(localInstanceId);
+    public void setInstanceId(String instanceId) {
+        statusReporterFactory.setInstanceId(instanceId);
     }
     
-    public void setReportToInfluxDB(boolean reportToInfluxDB) {
-        statusReporterFactory.setReportToInfluxDB(reportToInfluxDB);
+    public void sendData(boolean sendData) {
+        statusReporterFactory.setSendData(sendData);
     }
-    public void setInfluxDBProtocol(String influxDBProtocol) {
-        statusReporterFactory.setInfluxDBProtocol(influxDBProtocol);
+    public void setReportFormat(String reportFormat) {
+        statusReporterFactory.setReportFormat(ReportFormat.valueOf(reportFormat));
     }
-    public void setInfluxDBHostName(String influxDBHostName) {
-        statusReporterFactory.setInfluxDBHostName(influxDBHostName);
+    
+    public void setProtocol(String protocol) {
+        statusReporterFactory.setProtocol(protocol);
     }
-    public void setInfluxDBPort(String influxDBPort) {
-        statusReporterFactory.setInfluxDBPort(influxDBPort);
+    public void setHostName(String hostName) {
+        statusReporterFactory.setHostName(hostName);
     }
-    public void setInfluxDBDatabaseName(String influxDBDatabaseName) {
-        statusReporterFactory.setInfluxDBDatabaseName(influxDBDatabaseName);
+    public void setPort(String port) {
+        statusReporterFactory.setPort(Integer.valueOf(port));
+    }
+    public void setPathPart(String pathPart) {
+        statusReporterFactory.setPathPart(pathPart);
+    }
+    public void setQueryPart(String queryPart) {
+        statusReporterFactory.setQueryPart(queryPart);
     }
     
     public void setConnectionTimeout(int connectionTimeout) {

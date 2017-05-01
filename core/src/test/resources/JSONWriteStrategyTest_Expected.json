@@ -1,0 +1,22 @@
+[
+	{
+		"timestamp": "2007-12-03T10:15:30Z",
+		"key": "request_data",
+		"resource_name": "my-test-resource",
+		"host": "my-host",
+		"instanceId": "my-instance",
+		"my-meta-data-key": "my-meta-data-value",
+		"statusCodeName": "SUCCESS",
+		"totalNumberOfInvocations": 5
+	},
+	{
+		"timestamp": "2007-12-03T10:15:30Z",
+		"key": "request_data",
+		"resource_name": "my-test-resource",
+		"host": "my-host",
+		"instanceId": "my-instance",
+		"my-meta-data-key": "my-meta-data-value",
+		"statusCodeName": "CLIENT_ERROR",
+		"totalNumberOfInvocations": 6
+	}
+]

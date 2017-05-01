@@ -8,7 +8,7 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
+import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Resource;
 
 public class ExpectedResource {
     

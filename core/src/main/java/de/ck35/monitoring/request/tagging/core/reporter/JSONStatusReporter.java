@@ -1,4 +1,4 @@
-package de.ck35.monitoring.request.tagging.core.reporter.http;
+package de.ck35.monitoring.request.tagging.core.reporter;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -7,41 +7,33 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
-import de.ck35.monitoring.request.tagging.core.reporter.RequestTaggingStatusReporter.Resource;
-import de.ck35.monitoring.request.tagging.core.reporter.http.StreamingHttpReporter.WriteStrategy;
-
-public class JSONWriteStrategy implements StreamingHttpReporter.WriteStrategy {
+public class JSONStatusReporter implements StatusReporter {
 
     private final Instant instant;
     private final Optional<String> hostId;
     private final Optional<String> instanceId;
+    private final Consumer<String> writer;
+
     private boolean firstMeasurement;
 
-    public JSONWriteStrategy(Instant instant, String hostId, String instanceId) {
+    public JSONStatusReporter(Instant instant, String hostId, String instanceId, Consumer<String> writer) {
+        this.writer = writer;
         this.instant = Objects.requireNonNull(instant);
         this.hostId = Optional.ofNullable(hostId);
         this.instanceId = Optional.ofNullable(instanceId);
         this.firstMeasurement = true;
-    }
-
-    public static Function<Instant, WriteStrategy> writeStrategy(String hostId, String instanceId) {
-        return instant -> new JSONWriteStrategy(instant, hostId, instanceId);
-    }
-
-    @Override
-    public void beforeWrite(Consumer<String> writer) {
+        
         writer.accept("[");
     }
 
     @Override
-    public void afterWrite(Consumer<String> writer) {
+    public void close() {
         writer.accept("]");
     }
 
     @Override
-    public void write(Resource resource, Consumer<String> writer) {
+    public void accept(Resource resource) {
         JsonObject object = new JsonObject();
         object.appendField("timestamp", instant.toString());
         object.appendField("key", "request_data");

@@ -5,6 +5,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -35,6 +37,10 @@ public class RequestTaggingContext implements Closeable {
     private volatile Duration collectorSendDelayDuration;
     private volatile Function<Instant, StatusReporter> requestTaggingStatusReporterReference;
 
+    private volatile boolean requestIdEnabled;
+    private volatile boolean forceRequestIdOverwrite;
+    private volatile String requestIdParameterName;
+
     public RequestTaggingContext() {
         this(new StatusReporterFactory()::build);
     }
@@ -43,11 +49,17 @@ public class RequestTaggingContext implements Closeable {
         this(requestTaggingStatusReporterFactory, new HashAlgorithm()::hash, Clock.systemUTC());
     }
 
-    public RequestTaggingContext(Supplier<Function<Instant, StatusReporter>> requestTaggingStatusReporterFactory, Function<String, String> hashAlgorithm, Clock measurementClock) {
+    public RequestTaggingContext(Supplier<Function<Instant, StatusReporter>> requestTaggingStatusReporterFactory,
+                                 Function<String, String> hashAlgorithm,
+                                 Clock measurementClock) {
         this.requestTaggingStatusReporterFactory = Objects.requireNonNull(requestTaggingStatusReporterFactory);
         this.statusConsumer = new DefaultRequestTaggingStatusConsumer();
         defaultStatus = new DefaultRequestTaggingStatus(statusConsumer, hashAlgorithm, measurementClock);
         executor = new ScheduledThreadPoolExecutor(1);
+
+        requestIdEnabled = false;
+        forceRequestIdOverwrite = false;
+        requestIdParameterName = "X-Request-ID";
 
         loggerInfo = System.out::println;
         loggerWarn = (message, throwable) -> {
@@ -65,19 +77,30 @@ public class RequestTaggingContext implements Closeable {
 
         loggerInfo.accept("Scheduling send process for request tagging data with delay of '" + collectorSendDelayDuration + "'.");
         long startDelay = Math.max(0, sendIntervalClock.instant()
-                                               .plus(collectorSendDelayDuration)
-                                               .toEpochMilli()
+                                                       .plus(collectorSendDelayDuration)
+                                                       .toEpochMilli()
                 - Instant.now()
                          .toEpochMilli());
         executor.scheduleWithFixedDelay(this::send, startDelay, collectorSendDelayDuration.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    public void runWithinContext(Runnable runnable) {
-        taggingRunnable(runnable).run();
+    public void runWithinContext(Function<String, String> parameters, Runnable runnable) {
+        taggingRunnable(parameters, runnable).run();
     }
 
-    public RequestTaggingRunnable taggingRunnable(Runnable runnable) {
-        return new RequestTaggingRunnable(runnable, new DefaultRequestTaggingStatus(defaultStatus));
+    public RequestTaggingRunnable taggingRunnable(Function<String, String> parameters, Runnable runnable) {
+        DefaultRequestTaggingStatus status = new DefaultRequestTaggingStatus(defaultStatus);
+        if (requestIdEnabled) {
+            String requestId = forceRequestIdOverwrite ? generateUniqueRequestId() : Optional.ofNullable(parameters.apply(requestIdParameterName))
+                                                                                             .orElseGet(this::generateUniqueRequestId);
+            status.withRequestId(requestIdParameterName, requestId);
+        }
+        return new RequestTaggingRunnable(runnable, status);
+    }
+
+    protected String generateUniqueRequestId() {
+        return UUID.randomUUID()
+                   .toString();
     }
 
     @Override
@@ -92,7 +115,7 @@ public class RequestTaggingContext implements Closeable {
             StatusReporter reporter = requestTaggingStatusReporterReference.apply(now);
             try {
                 statusConsumer.report(reporter);
-            } finally {                
+            } finally {
                 reporter.close();
             }
         } catch (RuntimeException e) {
@@ -127,5 +150,24 @@ public class RequestTaggingContext implements Closeable {
 
     public DefaultRequestTaggingStatus getDefaultRequestTaggingStatus() {
         return defaultStatus;
+    }
+    
+    public void setRequestIdEnabled(boolean requestIdEnabled) {
+        this.requestIdEnabled = requestIdEnabled;
+    }
+    public boolean isRequestIdEnabled() {
+        return requestIdEnabled;
+    }
+    public void setForceRequestIdOverwrite(boolean forceRequestIdOverwrite) {
+        this.forceRequestIdOverwrite = forceRequestIdOverwrite;
+    }
+    public boolean isForceRequestIdOverwrite() {
+        return forceRequestIdOverwrite;
+    }
+    public String getRequestIdParameterName() {
+        return requestIdParameterName;
+    }
+    public void setRequestIdParameterName(String requestIdParameterName) {
+        this.requestIdParameterName = Objects.requireNonNull(requestIdParameterName, "Can not set requestIdParameterName to null!");
     }
 }

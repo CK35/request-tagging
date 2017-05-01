@@ -10,7 +10,7 @@ import java.util.function.Supplier;
  * The underlying message digest algorithm can be configured. The default is MD5. 
  * 
  * @author Christian Kaspari
- * @since 1.1.0
+ * @since 2.0.0
  */
 public class HashAlgorithm {
 

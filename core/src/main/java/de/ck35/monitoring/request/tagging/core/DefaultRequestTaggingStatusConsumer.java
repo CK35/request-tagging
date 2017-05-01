@@ -66,6 +66,10 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
             while (iter.hasNext()) {
                 currentNode = currentNode.children.computeIfAbsent(iter.next(), x -> new TreeNode());
             }
+            MetaDataPair requestId = status.getRequestId().map(MetaDataPair::of).orElse(null);
+            if(requestId != null) {
+                currentNode = currentNode.children.computeIfAbsent(requestId, x -> new TreeNode());
+            }
             MutableMeasurement measurement = currentNode.measurements.computeIfAbsent(status.getStatusCode(), x -> new MutableMeasurement(x.toString()));
             measurement.numberOfinvocations.increment();
             if (getMaxDurationsPerNode() <= 0) {
@@ -126,8 +130,8 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
         private final ConcurrentMap<StatusCode, MutableMeasurement> measurements;
 
         private TreeNode() {
-            this.measurements = new ConcurrentHashMap<>();
-            this.children = new ConcurrentHashMap<>();
+            this.measurements = new ConcurrentHashMap<>(3);
+            this.children = new ConcurrentHashMap<>(1);
         }
 
         public void report(String resourceName, SortedMap<String, String> currentMetaData, StatusReporter reporter) {
@@ -146,6 +150,7 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
                 child.report(resourceName, childMetaData, reporter);
             });
         }
+        
     }
 
     private static class MutableMeasurement {

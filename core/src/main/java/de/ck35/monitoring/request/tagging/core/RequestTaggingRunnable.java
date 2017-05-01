@@ -16,6 +16,7 @@ import de.ck35.monitoring.request.tagging.RequestTagging;
 public class RequestTaggingRunnable implements Runnable {
     
     private static final String EXCEPTION_CAUSE_KEY = "serverErrorCause";
+    private static final String DEFAULT_TIMER_KEY = "total_request_duration";
     
     private final Runnable runnable;
     private final DefaultRequestTaggingStatus status;
@@ -30,14 +31,14 @@ public class RequestTaggingRunnable implements Runnable {
     public void run() {
         RequestTagging.init(status);
         try {
-            status.startTimer(RequestTagging.Status.DEFAULT_TIMER_KEY);
+            status.startTimer(DEFAULT_TIMER_KEY);
             try {                
                 runnable.run();
             } catch(RuntimeException e) {                
                 tagServerError(status, e);
                 throw e;
             } finally {
-                status.stopTimer(RequestTagging.Status.DEFAULT_TIMER_KEY);
+                status.stopTimer(DEFAULT_TIMER_KEY);
                 status.consume();
             }
         } finally {

@@ -36,6 +36,7 @@ public class RequestTaggingValve extends ValveBase {
     public RequestTaggingValve() {
         super(true);
         statusReporterFactory = new StatusReporterFactory();
+        statusReporterFactory.setLoggerInfo(LOG::info);
         hashAlgorithm = new HashAlgorithm();
         stopWatchClock = Clock.systemUTC();
         context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash, stopWatchClock);
@@ -58,7 +59,7 @@ public class RequestTaggingValve extends ValveBase {
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
         try {
-            context.runWithinContext(() -> {
+            context.runWithinContext(request::getParameter, () -> {
                 try {
                     next.invoke(request, response);
                 } catch (IOException e) {

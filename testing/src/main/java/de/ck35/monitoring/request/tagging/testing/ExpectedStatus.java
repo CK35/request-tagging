@@ -72,7 +72,7 @@ public @interface ExpectedStatus {
      * @return The expected resource name. Default is
      *         {@link DefaultRequestTaggingStatus#DEFAULT_RESOURCE_NAME}.
      */
-    String resourceName() default DefaultRequestTaggingStatus.DEFAULT_RESOURCE_NAME;
+    String resourceName() default "default";
 
     /**
      * @return The ignored status of the tested request. Default is

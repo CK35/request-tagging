@@ -16,7 +16,7 @@ import java.util.function.Function;
  * Factory which creates the different request tagging status reporters.
  * 
  * @author Christian Kaspari
- * @since 1.1.0
+ * @since 2.0.0
  */
 public class StatusReporterFactory {
 

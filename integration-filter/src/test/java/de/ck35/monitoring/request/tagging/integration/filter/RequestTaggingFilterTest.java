@@ -60,7 +60,6 @@ public class RequestTaggingFilterTest {
                 @Override
                 public void onStartup(ServletContext servletContext) throws ServletException {
                     FilterRegistration.Dynamic filter = servletContext.addFilter("request-tagging", RequestTaggingFilter.class);
-                    filter.setInitParameter("reportToInfluxDB", "false");
                     filter.addMappingForServletNames(EnumSet.allOf(DispatcherType.class), true, "testRequestHandler");
                     
                     ServletRegistration.Dynamic servlet = servletContext.addServlet("testRequestHandler", HttpRequestHandlerServlet.class);

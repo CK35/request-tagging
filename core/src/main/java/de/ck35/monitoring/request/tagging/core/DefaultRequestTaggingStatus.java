@@ -3,9 +3,11 @@ package de.ck35.monitoring.request.tagging.core;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
@@ -26,7 +28,7 @@ import de.ck35.monitoring.request.tagging.RequestTagging.Status;
  */
 public class DefaultRequestTaggingStatus implements RequestTagging.Status {
 
-    public static final String DEFAULT_RESOURCE_NAME = "default";
+    private static final String DEFAULT_RESOURCE_NAME = "default";
 
     public static enum StatusCode {
 
@@ -44,6 +46,8 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
 
     private boolean ignored;
     private String resourceName;
+    private String requestIdParameterName;
+    private String requestId;
     private StatusCode statusCode;
     private SortedMap<String, String> metaData;
     private Map<String, StopWatch> stopWatches;
@@ -67,6 +71,8 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
         this.stopWatchClock = status.stopWatchClock;
         this.ignored = status.ignored;
         this.resourceName = status.resourceName;
+        this.requestIdParameterName = status.requestIdParameterName;
+        this.requestId = status.requestId;
         this.statusCode = status.statusCode;
         this.metaData = status.metaData == null ? null : new TreeMap<>(status.metaData);
         this.stopWatches = status.copyMeasurements();
@@ -145,6 +151,24 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
     public Status withHashedMetaData(String key, String value) {
         return withMetaData(key, hashAlgorithm.apply(value));
     }
+    
+    public Status withRequestId(String requestIdParameterName, String requestId) {
+        Objects.requireNonNull(requestIdParameterName, "Request-ID parenter name can not be null!");
+        Objects.requireNonNull(requestId, "Request-ID can not be null!");
+        this.requestIdParameterName = requestIdParameterName;
+        this.requestId = requestId;
+        return this;
+    }
+    
+    public Optional<Entry<String, String>> getRequestId() {
+        return Optional.ofNullable(requestId).map(id -> new AbstractMap.SimpleImmutableEntry<>(requestIdParameterName, id));
+    }
+    
+    @Override
+    public Status attachRequestId(BiConsumer<String, String> target) {
+        getRequestId().ifPresent(entry -> target.accept(entry.getKey(), entry.getValue()));
+        return this;
+    }
 
     public SortedMap<String, String> getMetaData() {
         if(metaData == null) {
@@ -192,7 +216,7 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
                  .ifPresent(duration -> visitor.accept(key, duration));
         });
     }
-
+    
     @Override
     public Runnable handover(Runnable runnable) {
         RequestTagging.Status status = RequestTagging.get();

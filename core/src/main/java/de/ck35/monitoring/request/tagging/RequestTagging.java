@@ -2,6 +2,7 @@ package de.ck35.monitoring.request.tagging;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 /**
  * The entry point for request tagging. Start request tagging by invoking:
@@ -22,11 +23,6 @@ public class RequestTagging {
      */
     public interface Status {
         
-        /**
-         * The key which will be used for the default request duration measurement.
-         */
-        static final String DEFAULT_TIMER_KEY = "total_request_duration";
-
         /**
          * Ignore this request. No reporting will be triggered. You have to call
          * {@link #heed()} if reporting should be triggered again after the
@@ -89,14 +85,29 @@ public class RequestTagging {
 
         /**
          * Add an optional key - value meta data pair. The given value will be
-         * hased with the configured message digest algorithm.
+         * hashed with the configured message digest algorithm.
          * 
          * @param key The key for the meta data.
          * @param value The value which will be hashed.
          * @return This instance for further updates.
-         * @since 1.1.0
+         * @since 2.0.0
          */
         Status withHashedMetaData(String key, String value);
+
+        /**
+         * If a request id is present for this request it will be handed over to the given target consumer. Use this
+         * method if you start a request to another (remote) resource for example over http.
+         * <p>
+         * Example usage:
+         * <pre>
+         *  java.net.HttpURLConnection connection = createHttpConnection();
+         *  RequestTagging.get().attachRequestId(connection::addRequestProperty);
+         * </pre>
+         * @param target The consumer which will be invoked with the request id parameter name and the actual id if present.
+         * @return This instance for further updates.
+         * @since 2.0.0
+         */
+        Status attachRequestId(BiConsumer<String, String> target);
         
         /**
          * Start a timer with the given id for measuring durations.
@@ -194,7 +205,12 @@ public class RequestTagging {
         public Status withHashedMetaData(String key, String value) {
             return this;
         }
-
+        
+        @Override
+        public Status attachRequestId(BiConsumer<String, String> target) {
+            return this;
+        }
+        
         @Override
         public Status success() {
             return this;

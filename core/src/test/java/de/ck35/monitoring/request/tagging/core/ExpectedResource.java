@@ -17,7 +17,7 @@ public class ExpectedResource {
     private Set<ExpectedMeasurement> expectedMeasurements;
     
     public ExpectedResource() {
-        this.name = DefaultRequestTaggingStatus.DEFAULT_RESOURCE_NAME;
+        this.name = "default";
         this.metaData = new TreeMap<>();
         this.expectedMeasurements = new HashSet<>();
     }

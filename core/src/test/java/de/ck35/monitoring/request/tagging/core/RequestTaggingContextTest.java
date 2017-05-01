@@ -3,6 +3,9 @@ package de.ck35.monitoring.request.tagging.core;
 import static de.ck35.monitoring.request.tagging.core.ExpectedMeasurement.measurement;
 import static de.ck35.monitoring.request.tagging.core.ExpectedResource.resource;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -44,6 +47,7 @@ public class RequestTaggingContextTest {
 
     @Mock StatusReporter requestTaggingStatusReporter;
     @Mock Function<Instant, StatusReporter> defaultRequestTaggingStatusReporter;
+    @Mock Function<String, String> parameters;
     @Captor ArgumentCaptor<Resource> resourceCaptor;
 
     @Before
@@ -65,7 +69,7 @@ public class RequestTaggingContextTest {
     @Test
     public void testSuccess() {
         try (RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .withMetaData("test-key", "test-value");
@@ -83,7 +87,7 @@ public class RequestTaggingContextTest {
     @Test
     public void testSuccessWithHashedValues() {
         try (RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .withHashedMetaData("test-key", "test-value");
@@ -101,7 +105,7 @@ public class RequestTaggingContextTest {
     @Test
     public void testClientError() {
         try (RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .clientError();
@@ -118,7 +122,7 @@ public class RequestTaggingContextTest {
     @Test
     public void testServerError() {
         try (RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-resource")
                               .serverError();
@@ -135,13 +139,13 @@ public class RequestTaggingContextTest {
     @Test
     public void testIgnore() {
         try (RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-ignore")
                               .ignore();
             })
                    .run();
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-success");
             })
@@ -157,7 +161,7 @@ public class RequestTaggingContextTest {
     @Test
     public void testHeed() {
         try (RequestTaggingContext context = requestTaggingContext()) {
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("test-heed")
                               .ignore()
@@ -177,7 +181,7 @@ public class RequestTaggingContextTest {
         try (RequestTaggingContext context = requestTaggingContext()) {
             RuntimeException test = new RuntimeException("test");
             try {
-                context.taggingRunnable(() -> {
+                context.taggingRunnable(parameters, () -> {
                     throw test;
                 })
                        .run();
@@ -203,7 +207,7 @@ public class RequestTaggingContextTest {
             doThrow(test).when(requestTaggingStatusReporter)
                          .accept(any(Resource.class));
 
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("error-while-reporting");
             })
@@ -211,7 +215,7 @@ public class RequestTaggingContextTest {
             verify(loggerWarn, timeout(10_000)).accept("Error while sending request tagging data!", test);
             reset(requestTaggingStatusReporter);
 
-            context.taggingRunnable(() -> {
+            context.taggingRunnable(parameters, () -> {
                 RequestTagging.get()
                               .withResourceName("no-error-while-reporting");
             })
@@ -233,6 +237,107 @@ public class RequestTaggingContextTest {
             LocalDateTime timestamp = LocalDateTime.now(context.getSendIntervalClock());
             assertEquals(0, timestamp.get(ChronoField.SECOND_OF_MINUTE));
             assertEquals(0, timestamp.get(ChronoField.MILLI_OF_SECOND));
+            
+            assertFalse(context.isRequestIdEnabled());
+            assertFalse(context.isForceRequestIdOverwrite());
+            assertEquals("X-Request-ID", context.getRequestIdParameterName());
+        }
+    }
+    
+    @Test
+    public void testRequestIdIsGenerated() {
+        try (RequestTaggingContext context = requestTaggingContext()) {
+            context.setRequestIdEnabled(true);
+            context.taggingRunnable(parameters, () -> {
+                RequestTagging.get()
+                              .withResourceName("test-resource")
+                              .withMetaData("test-key", "test-value");
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            
+            Resource resource = resourceCaptor.getValue();
+            assertNotNull(resource.getMetaData().get("X-Request-ID"));
+        }
+    }
+    
+    @Test
+    public void testRequestIdIsGeneratedAndHandedOver() {
+        try (RequestTaggingContext context = requestTaggingContext()) {
+            context.setRequestIdEnabled(true);
+            
+            context.taggingRunnable(parameters, () -> {
+                Thread other = new Thread(RequestTagging.get().handover(() -> {
+                    
+                }));
+                other.start();
+                try {
+                    other.join();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }).run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            
+            Resource resource = resourceCaptor.getValue();
+            assertNotNull(resource.getMetaData().get("X-Request-ID"));
+            assertEquals(2, resource.getMeasurements().get(0).getTotalNumberOfInvocations());
+        }
+    }
+    
+    @Test
+    public void testRequestIdIsGeneratedWithDifferentName() {
+        try (RequestTaggingContext context = requestTaggingContext()) {
+            context.setRequestIdEnabled(true);
+            context.setRequestIdParameterName("X-Correlation-ID");
+            context.taggingRunnable(parameters, () -> {
+                RequestTagging.get()
+                              .withResourceName("test-resource")
+                              .withMetaData("test-key", "test-value");
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            
+            Resource resource = resourceCaptor.getValue();
+            assertNotNull(resource.getMetaData().get("X-Correlation-ID"));
+        }
+    }
+    
+    @Test
+    public void testRequestIdIsUsedFromParameters() {
+        when(parameters.apply("X-Request-ID")).thenReturn("123");
+        try (RequestTaggingContext context = requestTaggingContext()) {
+            context.setRequestIdEnabled(true);
+            context.taggingRunnable(parameters, () -> {
+                RequestTagging.get()
+                              .withResourceName("test-resource")
+                              .withMetaData("test-key", "test-value");
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            
+            Resource resource = resourceCaptor.getValue();
+            assertEquals("123", resource.getMetaData().get("X-Request-ID"));
+        }
+    }
+    
+    @Test
+    public void testRequestIdIsIgnoredFromParameters() {
+        when(parameters.apply("X-Request-ID")).thenReturn("123");
+        try (RequestTaggingContext context = requestTaggingContext()) {
+            context.setRequestIdEnabled(true);
+            context.setForceRequestIdOverwrite(true);
+            context.taggingRunnable(parameters, () -> {
+                RequestTagging.get()
+                              .withResourceName("test-resource")
+                              .withMetaData("test-key", "test-value");
+            })
+                   .run();
+            verify(requestTaggingStatusReporter, timeout(10_000)).accept(resourceCaptor.capture());
+            
+            Resource resource = resourceCaptor.getValue();
+            assertNotNull(resource.getMetaData().get("X-Request-ID"));
+            assertNotEquals("123", resource.getMetaData().get("X-Request-ID"));
         }
     }
 

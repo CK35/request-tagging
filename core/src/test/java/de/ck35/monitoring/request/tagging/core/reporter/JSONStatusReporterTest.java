@@ -53,7 +53,7 @@ public class JSONStatusReporterTest {
         }
         
         String expected;
-        try (InputStream in = InfluxDBWriteStrategyTest.class.getResourceAsStream("/JSONWriteStrategyTest_Expected.json")) {
+        try (InputStream in = InfluxDBStatusReporterTest.class.getResourceAsStream("/JSONWriteStrategyTest_Expected.json")) {
             expected = new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8).replaceAll("\\s", "").replace("\n", "");
         }
         String actual = result.toString();
@@ -75,7 +75,7 @@ public class JSONStatusReporterTest {
         }
         
         String expected;
-        try (InputStream in = InfluxDBWriteStrategyTest.class.getResourceAsStream("/JSONWriteStrategyTest_Expected.json")) {
+        try (InputStream in = InfluxDBStatusReporterTest.class.getResourceAsStream("/JSONWriteStrategyTest_Expected.json")) {
             expected = new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8).replaceAll("\\s", "").replace("\n", "");
         }
         String actual = result.toString();
@@ -98,7 +98,7 @@ public class JSONStatusReporterTest {
         }
         
         String expected;
-        try (InputStream in = InfluxDBWriteStrategyTest.class.getResourceAsStream("/JSONWriteStrategyTest_Expected_with_durations.json")) {
+        try (InputStream in = InfluxDBStatusReporterTest.class.getResourceAsStream("/JSONWriteStrategyTest_Expected_with_durations.json")) {
             expected = new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8).replaceAll("\\s", "").replace("\n", "");
         }
         String actual = result.toString();

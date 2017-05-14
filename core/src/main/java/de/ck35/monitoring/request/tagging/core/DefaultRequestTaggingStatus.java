@@ -120,8 +120,8 @@ public class DefaultRequestTaggingStatus implements RequestTagging.Status {
         return statusCode;
     }
 
-    public void setStatusCode(String statusCode) {
-        this.statusCode = StatusCode.valueOf(statusCode);
+    public void setStatusCode(StatusCode statusCode) {
+        this.statusCode = statusCode;
     }
 
     @Override

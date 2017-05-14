@@ -24,14 +24,14 @@ import de.ck35.monitoring.request.tagging.core.reporter.InfluxDBStatusReporter.L
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Measurement;
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter.Resource;
 
-public class InfluxDBWriteStrategyTest {
+public class InfluxDBStatusReporterTest {
 
     private String hostId;
     private String instanceId;
     private Instant instant;
     private StringBuilder result;
 
-    public InfluxDBWriteStrategyTest() {
+    public InfluxDBStatusReporterTest() {
         this.hostId = "my-host";
         this.instanceId = "my-instance";
         this.instant = Instant.parse("2007-12-03T10:15:30.00Z");
@@ -76,7 +76,7 @@ public class InfluxDBWriteStrategyTest {
 
     private static void assertEqualsContent(String expectedResourceLocation, String actual) throws IOException {
         String expected;
-        try (InputStream in = InfluxDBWriteStrategyTest.class.getResourceAsStream(expectedResourceLocation)) {
+        try (InputStream in = InfluxDBStatusReporterTest.class.getResourceAsStream(expectedResourceLocation)) {
             expected = new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8);
         }
         Splitter splitter = Splitter.on("\n");

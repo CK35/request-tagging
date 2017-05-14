@@ -44,7 +44,7 @@ public class DefaultRequestTaggingStatusConsumer implements Consumer<DefaultRequ
     private volatile int maxDurationsPerNode;
 
     public DefaultRequestTaggingStatusConsumer() {
-        this.maxDurationsPerNode = maxDurationsPerNode;
+        this.maxDurationsPerNode = 0;
         this.swapLock = new ReentrantReadWriteLock();
         this.tree = new ConcurrentHashMap<>();
     }

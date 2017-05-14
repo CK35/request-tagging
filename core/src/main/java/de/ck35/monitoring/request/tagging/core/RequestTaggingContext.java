@@ -67,7 +67,7 @@ public class RequestTaggingContext implements Closeable {
             throwable.printStackTrace();
         };
 
-        setCollectorSendDelayDuration("PT1M");
+        setCollectorSendDelayDuration(Duration.ofMinutes(1));
     }
 
     public void initialize() {
@@ -84,8 +84,8 @@ public class RequestTaggingContext implements Closeable {
         executor.scheduleWithFixedDelay(this::send, startDelay, collectorSendDelayDuration.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    public void runWithinContext(Function<String, String> parameters, Runnable runnable) {
-        taggingRunnable(parameters, runnable).run();
+    public void runWithinContext(Function<String, String> headers, Runnable runnable) {
+        taggingRunnable(headers, runnable).run();
     }
 
     public RequestTaggingRunnable taggingRunnable(Function<String, String> parameters, Runnable runnable) {
@@ -135,8 +135,8 @@ public class RequestTaggingContext implements Closeable {
         return sendIntervalClock;
     }
 
-    public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
-        this.collectorSendDelayDuration = Duration.parse(collectorSendDelayDuration);
+    public void setCollectorSendDelayDuration(Duration collectorSendDelayDuration) {
+        this.collectorSendDelayDuration = collectorSendDelayDuration;
         this.sendIntervalClock = Clock.tick(Clock.systemUTC(), this.collectorSendDelayDuration);
     }
 
@@ -170,4 +170,5 @@ public class RequestTaggingContext implements Closeable {
     public void setRequestIdParameterName(String requestIdParameterName) {
         this.requestIdParameterName = Objects.requireNonNull(requestIdParameterName, "Can not set requestIdParameterName to null!");
     }
+    
 }

@@ -8,6 +8,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -44,17 +45,13 @@ public class StatusReporterFactory {
     public StatusReporterFactory() {
         loggerInfo = System.out::println;
 
-        hostId = null;
-        instanceId = null;
-
-        sendData = false;
         reportFormat = ReportFormat.JSON;
 
         protocol = "http";
         hostName = "localhost";
         port = 8086;
         pathPart = "/write";
-        queryPart = "db=request-tagging";
+        queryPart = "db=request_data";
 
         connectionTimeout = 5000;
         readTimeout = 5000;
@@ -129,11 +126,11 @@ public class StatusReporterFactory {
     public boolean isSendData() {
         return sendData;
     }
-    
+
     public void setReportFormat(ReportFormat reportFormat) {
         this.reportFormat = reportFormat;
     }
-    
+
     public ReportFormat getReportFormat() {
         return reportFormat;
     }
@@ -171,7 +168,9 @@ public class StatusReporterFactory {
     }
 
     public void setPathPart(String pathPart) {
-        this.pathPart = pathPart;
+        this.pathPart = Optional.ofNullable(pathPart)
+                                .map(x -> x.isEmpty() ? "/" : x)
+                                .orElse("/");
     }
 
     public String getPathPart() {
@@ -179,7 +178,9 @@ public class StatusReporterFactory {
     }
 
     public void setQueryPart(String queryPart) {
-        this.queryPart = queryPart;
+        this.queryPart = Optional.ofNullable(queryPart)
+                                 .map(x -> x.isEmpty() ? null : x)
+                                 .orElse(null);
     }
 
     public String getQueryPart() {

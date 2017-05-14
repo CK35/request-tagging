@@ -43,7 +43,7 @@ public class RequestTaggingContextTest {
     private static final Logger LOG = LoggerFactory.getLogger(RequestTaggingContextTest.class);
 
     private Supplier<Function<Instant, StatusReporter>> defaultRequestTaggingStatusReporterSupplier;
-    private String collectorSendDelayDuration;
+    private Duration collectorSendDelayDuration;
 
     @Mock StatusReporter requestTaggingStatusReporter;
     @Mock Function<Instant, StatusReporter> defaultRequestTaggingStatusReporter;
@@ -52,7 +52,7 @@ public class RequestTaggingContextTest {
 
     @Before
     public void before() {
-        collectorSendDelayDuration = "PT1s";
+        collectorSendDelayDuration = Duration.ofSeconds(1);
         when(defaultRequestTaggingStatusReporter.apply(any())).thenReturn(requestTaggingStatusReporter);
         defaultRequestTaggingStatusReporterSupplier = () -> defaultRequestTaggingStatusReporter;
     }

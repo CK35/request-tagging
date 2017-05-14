@@ -1,8 +1,9 @@
 package de.ck35.monitoring.request.tagging.integration.tomcat;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Clock;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 
@@ -15,8 +16,10 @@ import org.apache.juli.logging.LogFactory;
 
 import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
+import de.ck35.monitoring.request.tagging.core.RequestTaggingContextConfigurer;
+import de.ck35.monitoring.request.tagging.core.RequestTaggingContextConfigurer.ConfigKey;
+import de.ck35.monitoring.request.tagging.core.RequestTaggingRunnable.WrappedException;
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
-import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory.ReportFormat;
 
 /**
  * Tomcat Valve implementation which adds the request tagging mechanism to all incoming requests. 
@@ -32,6 +35,7 @@ public class RequestTaggingValve extends ValveBase {
     private final StatusReporterFactory statusReporterFactory;
     private final HashAlgorithm hashAlgorithm;
     private final Clock stopWatchClock;
+    private final Map<String, String> properties;
 
     public RequestTaggingValve() {
         super(true);
@@ -39,6 +43,7 @@ public class RequestTaggingValve extends ValveBase {
         statusReporterFactory.setLoggerInfo(LOG::info);
         hashAlgorithm = new HashAlgorithm();
         stopWatchClock = Clock.systemUTC();
+        properties = new HashMap<>();
         context = new RequestTaggingContext(statusReporterFactory::build, hashAlgorithm::hash, stopWatchClock);
         context.setLoggerInfo(LOG::info);
         context.setLoggerWarn(LOG::warn);
@@ -47,6 +52,10 @@ public class RequestTaggingValve extends ValveBase {
     @Override
     protected synchronized void startInternal() throws LifecycleException {
         super.startInternal();
+        RequestTaggingContextConfigurer configurer = new RequestTaggingContextConfigurer(properties::get, LOG::info);
+        configurer.configure(hashAlgorithm);
+        configurer.configure(context);
+        configurer.configure(statusReporterFactory);
         context.initialize();
     }
 
@@ -59,96 +68,99 @@ public class RequestTaggingValve extends ValveBase {
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
         try {
-            context.runWithinContext(request::getParameter, () -> {
+            context.runWithinContext(request::getHeader, () -> {
                 try {
                     next.invoke(request, response);
                 } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                } catch (ServletException e) {
-                    throw new UncheckedServletException(e);
+                    throw new WrappedException(e);
+                } catch(ServletException e) {
+                    throw new WrappedException(e, e.getCause());
                 }
             });
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
-        } catch (UncheckedServletException e) {
-            throw e.getCause();
+        } catch (WrappedException e) {
+            Throwable source = e.getSource();
+            if(source instanceof IOException) {
+                throw (IOException) source;
+            } else if (source instanceof ServletException) {
+                throw (ServletException) source;
+            } else {
+                throw e;
+            }
         }
     }
     
     @Override
     public String getInfo() {
-        return "A request tagging Tomcat Valve implementation.";
+        return "A  Tomcat Valve for Request Tagging.";
     }
     
-    
-    public void setCollectorSendDelayDuration(String collectorSendDelayDuration) {
-        context.setCollectorSendDelayDuration(collectorSendDelayDuration);
+    public void setCollectorSendDelayDuration(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setRequestIdEnabled(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setForceRequestIdOverwrite(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setRequestIdParameterName(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setIgnored(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setResourceName(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setStatusCode(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setMaxDurationsPerNode(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setHostId(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setInstanceId(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setSendData(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setReportFormat(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setProtocol(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setHostName(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setPort(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setPathPart(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setQueryPart(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setConnectionTimeout(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setReadTimeout(String value) {
+        putPropertyWithNameFromStackTrace(value);
+    }
+    public void setAlgorithmName(String value) {
+        putPropertyWithNameFromStackTrace(value);
     }
     
-    public void setHostId(String hostId) {
-        statusReporterFactory.setHostId(hostId);
-    }
-    public void setInstanceId(String instanceId) {
-        statusReporterFactory.setInstanceId(instanceId);
-    }
-    
-    public void sendData(boolean sendData) {
-        statusReporterFactory.setSendData(sendData);
-    }
-    public void setReportFormat(String reportFormat) {
-        statusReporterFactory.setReportFormat(ReportFormat.valueOf(reportFormat));
+    private void putPropertyWithNameFromStackTrace(String value) {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        String methodName = stackTrace[2].getMethodName().substring("set".length());
+        methodName = methodName.substring(0, 1).toLowerCase() + methodName.substring(1, methodName.length());
+        ConfigKey configKey = ConfigKey.valueOf(methodName);
+        properties.put(configKey.getName(), value);
     }
     
-    public void setProtocol(String protocol) {
-        statusReporterFactory.setProtocol(protocol);
-    }
-    public void setHostName(String hostName) {
-        statusReporterFactory.setHostName(hostName);
-    }
-    public void setPort(String port) {
-        statusReporterFactory.setPort(Integer.valueOf(port));
-    }
-    public void setPathPart(String pathPart) {
-        statusReporterFactory.setPathPart(pathPart);
-    }
-    public void setQueryPart(String queryPart) {
-        statusReporterFactory.setQueryPart(queryPart);
-    }
-    
-    public void setConnectionTimeout(int connectionTimeout) {
-        statusReporterFactory.setConnectionTimeout(connectionTimeout);
-    }
-    public void setReadTimeout(int readTimeout) {
-        statusReporterFactory.setReadTimeout(readTimeout);
-    }
-
-    public void setHashAlgorithmName(String hashAlgorithmName) {
-        hashAlgorithm.setAlgorithmName(hashAlgorithmName);
-    }
-    
-    
-    public void setDefaultRequestTaggingStatusIgnored(boolean defaultRequestTaggingStatusIgnored) {
-        context.getDefaultRequestTaggingStatus().setIgnored(defaultRequestTaggingStatusIgnored);
-    }
-    public void setDefaultRequestTaggingStatusResourceName(String defaultRequestTaggingStatusResourceName) {
-        context.getDefaultRequestTaggingStatus().setResourceName(defaultRequestTaggingStatusResourceName);
-    }
-    public void setDefaultRequestTaggingStatusCode(String defaultRequestTaggingStatusCode) {
-        context.getDefaultRequestTaggingStatus().setStatusCode(defaultRequestTaggingStatusCode);
-    }
-    
-    public void setMaxDurationsPerNode(int maxDurationsPerNode) {
-        context.getStatusConsumer().setMaxDurationsPerNode(maxDurationsPerNode);
-    }
-    
-    private static class UncheckedServletException extends RuntimeException {
-
-        public UncheckedServletException(ServletException servletException) {
-            super(servletException);
-        }
-        @Override
-        public ServletException getCause() {
-            return (ServletException) super.getCause();
-        }
-    }
 }

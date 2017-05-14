@@ -1,8 +1,8 @@
 package de.ck35.monitoring.request.tagging.integration.filter;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Clock;
+import java.util.function.Function;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -10,13 +10,15 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.ck35.monitoring.request.tagging.core.HashAlgorithm;
 import de.ck35.monitoring.request.tagging.core.RequestTaggingContext;
-import de.ck35.monitoring.request.tagging.core.RequestTaggingContextConfiguration;
+import de.ck35.monitoring.request.tagging.core.RequestTaggingContextConfigurer;
+import de.ck35.monitoring.request.tagging.core.RequestTaggingRunnable.WrappedException;
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
 
 /**
@@ -47,28 +49,33 @@ public class RequestTaggingFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         try {
-            context.runWithinContext(request::getParameter, () -> {
+            context.runWithinContext(header(request), () -> {
                 try {
                     chain.doFilter(request, response);
                 } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                } catch (ServletException e) {
-                    throw new UncheckedServletException(e);
+                    throw new WrappedException(e);
+                } catch(ServletException e) {
+                    throw new WrappedException(e, e.getCause());
                 }
             });
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
-        } catch (UncheckedServletException e) {
-            throw e.getCause();
+        } catch (WrappedException e) {
+            Throwable source = e.getSource();
+            if(source instanceof IOException) {
+                throw (IOException) source;
+            } else if (source instanceof ServletException) {
+                throw (ServletException) source;
+            } else {
+                throw e;
+            }
         }
     }
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        RequestTaggingContextConfiguration configuration = new RequestTaggingContextConfiguration(filterConfig::getInitParameter);
-        configuration.configure(hashAlgorithm);
-        configuration.configure(context);
-        configuration.configure(statusReporterFactory);
+        RequestTaggingContextConfigurer configurer = new RequestTaggingContextConfigurer(filterConfig::getInitParameter, LOG::info);
+        configurer.configure(hashAlgorithm);
+        configurer.configure(context);
+        configurer.configure(statusReporterFactory);
         context.initialize();
     }
 
@@ -76,17 +83,13 @@ public class RequestTaggingFilter implements Filter {
     public void destroy() {
         context.close();
     }
-
-    private static class UncheckedServletException extends RuntimeException {
-
-        public UncheckedServletException(ServletException servletException) {
-            super(servletException);
-        }
-
-        @Override
-        public ServletException getCause() {
-            return (ServletException) super.getCause();
+    
+    private Function<String, String> header(ServletRequest request) {
+        if(request instanceof HttpServletRequest) {
+            return ((HttpServletRequest) request)::getHeader;
+        } else {
+            return x -> null;
         }
     }
-
+    
 }

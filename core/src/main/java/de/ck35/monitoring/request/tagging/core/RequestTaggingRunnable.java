@@ -3,6 +3,7 @@ package de.ck35.monitoring.request.tagging.core;
 import java.util.Objects;
 
 import de.ck35.monitoring.request.tagging.RequestTagging;
+import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus.StatusCode;
 
 /**
  * Provides the request tagging mechanism. Wraps a {@link Runnable} which can access the
@@ -34,8 +35,12 @@ public class RequestTaggingRunnable implements Runnable {
             status.startTimer(DEFAULT_TIMER_KEY);
             try {                
                 runnable.run();
-            } catch(RuntimeException e) {                
-                tagServerError(status, e);
+            } catch(RuntimeException e) { 
+                if(e instanceof WrappedException) {
+                    tagServerError(e.getCause());
+                } else {
+                    tagServerError(e);
+                }
                 throw e;
             } finally {
                 status.stopTimer(DEFAULT_TIMER_KEY);
@@ -46,8 +51,25 @@ public class RequestTaggingRunnable implements Runnable {
         }
     }
     
-    public static RequestTagging.Status tagServerError(RequestTagging.Status status, Throwable e) {
-        return status.serverError().withMetaData(EXCEPTION_CAUSE_KEY, e.getClass().getName());
+    private void tagServerError(Throwable e) {
+        if(status.getStatusCode() == StatusCode.SUCCESS) {            
+            status.serverError().withMetaData(EXCEPTION_CAUSE_KEY, e.getClass().getName());
+        }
     }
     
+    public static class WrappedException extends RuntimeException {
+        
+        private final Throwable source;
+        
+        public WrappedException(Throwable cause) {
+            this(cause, cause);
+        }
+        public WrappedException(Throwable source, Throwable cause) {
+            super(cause);
+            this.source = source;
+        }
+        public Throwable getSource() {
+            return source;
+        }
+    }
 }

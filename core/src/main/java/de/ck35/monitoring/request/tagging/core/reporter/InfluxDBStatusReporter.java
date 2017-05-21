@@ -32,21 +32,24 @@ public class InfluxDBStatusReporter implements StatusReporter {
         resource.getMeasurements()
                 .forEach(measurement -> totalNumberOfInvocations.writeField(measurement.getStatusCodeName(), measurement.getTotalNumberOfInvocations()));
         writer.accept(totalNumberOfInvocations.getCompleteLine());
-        
-        resource.getMeasurements().forEach(measurement -> {
-            Line lineWithStatusCode = new Line(lineWithMetaData);
-            lineWithStatusCode.writeTag("statusCodeName", measurement.getStatusCodeName());
-            measurement.getDurations().forEach((key, durations) -> {
-                for(int index = 0 ; index < durations.size() ; index++) {
-                    Line lineWithDuration = new Line(lineWithStatusCode);
-                    lineWithDuration.writeTag("uniqueDurationIndex", Integer.toString(index));
-                    lineWithDuration.writeField(key, durations.get(index).toMillis());
-                    writer.accept(lineWithDuration.getCompleteLine());
-                }
-            });
-        });
+
+        resource.getMeasurements()
+                .forEach(measurement -> {
+                    Line lineWithStatusCode = new Line(lineWithMetaData);
+                    lineWithStatusCode.writeTag("statusCodeName", measurement.getStatusCodeName());
+                    measurement.getDurations()
+                               .forEach((key, durations) -> {
+                                   for (int index = 0; index < durations.size(); index++) {
+                                       Line lineWithDuration = new Line(lineWithStatusCode);
+                                       lineWithDuration.writeTag("uniqueDurationIndex", Integer.toString(index));
+                                       lineWithDuration.writeField(key, durations.get(index)
+                                                                                 .toMillis());
+                                       writer.accept(lineWithDuration.getCompleteLine());
+                                   }
+                               });
+                });
     }
-    
+
     public static class Line {
 
         private enum WritePosition {
@@ -72,28 +75,27 @@ public class InfluxDBStatusReporter implements StatusReporter {
 
         public void writeTag(String tagKey, String tagValue) {
             if (position == WritePosition.TAGS) {
-                builder.append(",");
+                append(",");
             } else {
                 throw new IllegalStateException("Can not append tag at this position: '" + position + "'!");
             }
-            builder.append(tagKey)
-                   .append("=\"")
-                   .append(tagValue.replace("\"", "\\\""))
-                   .append("\"");
+            this.appendEscaped(tagKey)
+                .append("=")
+                .appendEscaped(tagValue);
         }
 
         public void writeField(String key, long value) {
             if (position == WritePosition.TAGS) {
-                builder.append(" ");
+                append(" ");
                 position = WritePosition.FIELDS;
             } else if (position == WritePosition.FIELDS) {
-                builder.append(",");
+                append(",");
             } else {
                 throw new IllegalStateException("Can not append field at this position: '" + position + "'!");
             }
-            builder.append(key)
-                   .append("=")
-                   .append(value);
+            this.appendEscaped(key)
+                .append("=")
+                .append(value);
         }
 
         public String getCompleteLine() {
@@ -106,6 +108,34 @@ public class InfluxDBStatusReporter implements StatusReporter {
             } else {
                 throw new IllegalStateException("Can not complete line at position: '" + position + "'!");
             }
+        }
+
+        private Line append(String token) {
+            builder.append(token);
+            return this;
+        }
+
+        private Line append(long value) {
+            builder.append(value);
+            return this;
+        }
+
+        private Line appendEscaped(String token) {
+            for (int index = 0; index < token.length(); index++) {
+                char current = token.charAt(index);
+                if (current == ',') {
+                    builder.append("\\,");
+                } else if (current == '=') {
+                    builder.append("\\=");
+                } else if (current == ' ') {
+                    builder.append("\\ ");
+                } else if (current == '\"') {
+                    builder.append("\\\"");
+                } else {
+                    builder.append(current);
+                }
+            }
+            return this;
         }
 
         private static String toLineEnding(Instant instant) {

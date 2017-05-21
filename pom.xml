@@ -44,6 +44,16 @@
         <module>testing</module>
     </modules>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>de.ck35.monitoring</groupId>
+                <artifactId>request-tagging-core</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <build>
         <plugins>
             <plugin>
@@ -71,7 +81,7 @@
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
-                     <execution>
+                    <execution>
                         <id>report</id>
                         <phase>prepare-package</phase>
                         <goals>

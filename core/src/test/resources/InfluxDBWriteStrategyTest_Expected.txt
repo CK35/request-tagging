@@ -1,1 +1,1 @@
-request_data,resource_name="my-test-resource",host="my-host",instanceId="my-instance",my-meta-data-key="my-meta-data-value" SUCCESS=5,CLIENT_ERROR=6 1196676930000000000
+request_data,resource_name=my-test-resource,host=my-host,instanceId=my-instance,my-meta-data-key=my-meta-data-value SUCCESS=5,CLIENT_ERROR=6 1196676930000000000

@@ -78,7 +78,7 @@ public class StatusReporterFactoryTest {
         verifyHttp(server).once(method(Method.POST),
                                 uri("/write"),
                                 parameter("db", "request_data"),
-                                withPostBodyContaining("request_data,resource_name=\"my-test-resource\",host=\"my-test-host\",instanceId=\"a\",my-key=\"my-value\" SUCCESS=10 1196676930000000000"));
+                                withPostBodyContaining("request_data,resource_name=my-test-resource,host=my-test-host,instanceId=a,my-key=my-value SUCCESS=10 1196676930000000000"));
     }
 
     @Test(expected = HttpTransferException.class)

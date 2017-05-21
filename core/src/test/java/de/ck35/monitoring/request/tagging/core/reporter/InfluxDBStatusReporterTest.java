@@ -73,6 +73,18 @@ public class InfluxDBStatusReporterTest {
 
         assertEqualsContent("/InfluxDBWriteStrategyTest_Expected_with_durations.txt", result.toString());
     }
+    
+    @Test
+    public void testEscaping() {
+        Line line = new Line(instant);
+        line.writeTag("k,e=y ", "v,a=l u\"e");
+        line.writeField("fieldK,e=y", 5);
+        String actual = line.getCompleteLine();
+        String expected = "request_data,k\\,e\\=y\\ =v\\,a\\=l\\ u\\\"e fieldK\\,e\\=y=5 1196676930000000000\n";
+        System.out.println(actual);
+        System.out.println(expected);
+        assertEquals(expected, actual);
+    }
 
     private static void assertEqualsContent(String expectedResourceLocation, String actual) throws IOException {
         String expected;

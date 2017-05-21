@@ -15,7 +15,6 @@
         <dependency>
             <groupId>de.ck35.monitoring</groupId>
             <artifactId>request-tagging-core</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
         </dependency>
     
         <dependency>

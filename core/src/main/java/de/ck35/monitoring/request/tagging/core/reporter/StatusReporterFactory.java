@@ -7,6 +7,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -22,7 +24,7 @@ import java.util.function.Function;
 public class StatusReporterFactory {
 
     public enum ReportFormat {
-            INFLUX_DB, JSON;
+            INFLUX_DB, ELASTICSEARCH, JSON;
     }
 
     private Consumer<String> loggerInfo;
@@ -42,19 +44,25 @@ public class StatusReporterFactory {
     private int connectionTimeout;
     private int readTimeout;
 
+    private String elasticsearchDocumentType;
+    private DateTimeFormatter elasticsearchIndexPrefixTemplate;
+
     public StatusReporterFactory() {
-        loggerInfo = System.out::println;
+        setLoggerInfo(System.out::println);
 
-        reportFormat = ReportFormat.JSON;
+        setReportFormat(ReportFormat.JSON);
 
-        protocol = "http";
-        hostName = "localhost";
-        port = 8086;
-        pathPart = "/write";
-        queryPart = "db=request_data";
+        setProtocol("http");
+        setHostName("localhost");
+        setPort(8086);
+        setPathPart("/write");
+        setQueryPart("db=request_data");
 
-        connectionTimeout = 5000;
-        readTimeout = 5000;
+        setConnectionTimeout(5000);
+        setReadTimeout(5000);
+
+        setElasticsearchDocumentType("request_data");
+        setElasticsearchIndexPrefixTemplate("YYYYMMdd");
     }
 
     public Function<Instant, StatusReporter> build() {
@@ -88,6 +96,13 @@ public class StatusReporterFactory {
         switch (reportFormat) {
         case INFLUX_DB:
             return (instant, writer) -> new InfluxDBStatusReporter(instant, hostId, instanceId, writer);
+        case ELASTICSEARCH:
+            return (instant, writer) -> new ElasticsearchStatusReporter(instant,
+                                                                        hostId,
+                                                                        instanceId,
+                                                                        writer,
+                                                                        elasticsearchIndexPrefixTemplate.format(instant) + "_" + elasticsearchDocumentType,
+                                                                        elasticsearchDocumentType);
         case JSON:
             return (instant, writer) -> new JSONStatusReporter(instant, hostId, instanceId, writer);
         default:
@@ -99,72 +114,36 @@ public class StatusReporterFactory {
         this.loggerInfo = Objects.requireNonNull(loggerInfo, "Can not set info logger to null.");
     }
 
-    public Consumer<String> getLoggerInfo() {
-        return loggerInfo;
-    }
-
     public void setHostId(String hostId) {
         this.hostId = hostId;
-    }
-
-    public String getHostId() {
-        return hostId;
     }
 
     public void setInstanceId(String instanceId) {
         this.instanceId = instanceId;
     }
 
-    public String getInstanceId() {
-        return instanceId;
-    }
-
     public void setSendData(boolean sendData) {
         this.sendData = sendData;
     }
 
-    public boolean isSendData() {
-        return sendData;
-    }
-
     public void setReportFormat(ReportFormat reportFormat) {
-        this.reportFormat = reportFormat;
-    }
-
-    public ReportFormat getReportFormat() {
-        return reportFormat;
+        this.reportFormat = Objects.requireNonNull(reportFormat, "Can not set reportFormat to null!");
     }
 
     public void setWriteStrategy(ReportFormat writeStrategy) {
         this.reportFormat = Objects.requireNonNull(writeStrategy, "Can not set writeStrategy to null!");
     }
 
-    public ReportFormat getWriteStrategy() {
-        return reportFormat;
-    }
-
     public void setProtocol(String protocol) {
         this.protocol = Objects.requireNonNull(protocol, "Can not set protocol to null!");
-    }
-
-    public String getProtocol() {
-        return protocol;
     }
 
     public void setHostName(String hostName) {
         this.hostName = Objects.requireNonNull(hostName, "Can not set hostName to null!");
     }
 
-    public String getHostName() {
-        return hostName;
-    }
-
     public void setPort(int port) {
         this.port = port;
-    }
-
-    public int getPort() {
-        return port;
     }
 
     public void setPathPart(String pathPart) {
@@ -173,34 +152,27 @@ public class StatusReporterFactory {
                                 .orElse("/");
     }
 
-    public String getPathPart() {
-        return pathPart;
-    }
-
     public void setQueryPart(String queryPart) {
         this.queryPart = Optional.ofNullable(queryPart)
                                  .map(x -> x.isEmpty() ? null : x)
                                  .orElse(null);
     }
 
-    public String getQueryPart() {
-        return queryPart;
-    }
-
     public void setConnectionTimeout(int connectionTimeout) {
         this.connectionTimeout = connectionTimeout;
-    }
-
-    public int getConnectionTimeout() {
-        return connectionTimeout;
     }
 
     public void setReadTimeout(int readTimeout) {
         this.readTimeout = readTimeout;
     }
 
-    public int getReadTimeout() {
-        return readTimeout;
+    public void setElasticsearchDocumentType(String elasticsearchDocumentType) {
+        this.elasticsearchDocumentType = Objects.requireNonNull(elasticsearchDocumentType, "Can not set elasticsearchDocumentType to null!");
+    }
+
+    public void setElasticsearchIndexPrefixTemplate(String elasticsearchIndexPrefixTemplate) {
+        this.elasticsearchIndexPrefixTemplate = DateTimeFormatter.ofPattern(elasticsearchIndexPrefixTemplate)
+                                                                 .withZone(ZoneOffset.UTC);
     }
 
 }

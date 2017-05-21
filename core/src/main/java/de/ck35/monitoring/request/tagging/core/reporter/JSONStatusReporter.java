@@ -13,7 +13,7 @@ public class JSONStatusReporter implements StatusReporter {
     private final Instant instant;
     private final Optional<String> hostId;
     private final Optional<String> instanceId;
-    private final Consumer<String> writer;
+    protected final Consumer<String> writer;
 
     private boolean firstMeasurement;
 
@@ -23,13 +23,29 @@ public class JSONStatusReporter implements StatusReporter {
         this.hostId = Optional.ofNullable(hostId);
         this.instanceId = Optional.ofNullable(instanceId);
         this.firstMeasurement = true;
-        
+        beforeMeasurements();
+    }
+    
+    protected void beforeMeasurements() {
         writer.accept("[");
     }
+    
+    protected void afterMeasurements() {
+        writer.accept("]");
+    }
 
+    protected void appendMeasurement(JsonObject measurementObject) {
+        if(firstMeasurement) {
+            firstMeasurement = false;
+        } else {
+            writer.accept(",");
+        }
+        writer.accept(measurementObject.toJSON());
+    }
+    
     @Override
     public void close() {
-        writer.accept("]");
+        afterMeasurements();
     }
 
     @Override
@@ -48,12 +64,7 @@ public class JSONStatusReporter implements StatusReporter {
                     measurementObject.appendField("statusCodeName", measurement.getStatusCodeName());
                     measurementObject.appendField("totalNumberOfInvocations", measurement.getTotalNumberOfInvocations());
                     measurement.getDurations().forEach(measurementObject::appendField);
-                    if(firstMeasurement) {
-                        firstMeasurement = false;
-                    } else {
-                        writer.accept(",");
-                    }
-                    writer.accept(measurementObject.toJSON());
+                    appendMeasurement(measurementObject);
                 });
     }
 

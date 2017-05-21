@@ -39,6 +39,9 @@ public class RequestTaggingContextConfigurer {
             queryPart("requestTagging.statusReporter.queryPart"),
             connectionTimeout("requestTagging.statusReporter.connectionTimeout"),
             readTimeout("requestTagging.statusReporter.readTimeout"),
+            
+            elasticsearchDocumentType("requestTagging.statusReporter.elasticsearchDocumentType"),
+            elasticsearchIndexPrefixTemplate("requestTagging.statusReporter.elasticsearchIndexPrefixTemplate"),
 
             algorithmName("requestTagging.hashAlgorithm.algorithmName");
 
@@ -91,6 +94,9 @@ public class RequestTaggingContextConfigurer {
 
         configureIntValue(ConfigKey.connectionTimeout, statusReporterFactory::setConnectionTimeout);
         configureIntValue(ConfigKey.readTimeout, statusReporterFactory::setReadTimeout);
+        
+        configureStringValue(ConfigKey.elasticsearchDocumentType, statusReporterFactory::setElasticsearchDocumentType);
+        configureStringValue(ConfigKey.elasticsearchIndexPrefixTemplate, statusReporterFactory::setElasticsearchIndexPrefixTemplate);
     }
 
     public void configure(HashAlgorithm hashAlgorithm) {

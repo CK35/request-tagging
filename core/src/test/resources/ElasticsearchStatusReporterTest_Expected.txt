@@ -1,0 +1,2 @@
+{"index": { "_index": "my-index", "_type": "my-type", "_id": "123"}}
+{"timestamp":"2007-12-03T10:15:30Z","key":"request_data","resource_name":"test-resource","host":"my-host-id","instanceId":"my-instance-id","statusCodeName":"SUCCESS","totalNumberOfInvocations":5}

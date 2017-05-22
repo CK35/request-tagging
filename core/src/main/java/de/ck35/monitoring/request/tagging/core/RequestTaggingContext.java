@@ -18,7 +18,7 @@ import de.ck35.monitoring.request.tagging.core.reporter.StatusReporter;
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
 
 /**
- * A reusable context for Request Tagging.
+ * A context for Request Tagging which can be used inside various environments.
  *
  * @author Christian Kaspari
  * @since 1.0.0

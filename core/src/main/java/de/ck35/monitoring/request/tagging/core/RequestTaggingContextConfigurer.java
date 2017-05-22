@@ -11,6 +11,14 @@ import de.ck35.monitoring.request.tagging.core.DefaultRequestTaggingStatus.Statu
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory;
 import de.ck35.monitoring.request.tagging.core.reporter.StatusReporterFactory.ReportFormat;
 
+/**
+ * Contains all configuration keys for request-tagging components. It also
+ * contains helper methods which can be used to load configurations from various
+ * sources.
+ * 
+ * @author Christian Kaspari
+ * @since 2.0.0
+ */
 public class RequestTaggingContextConfigurer {
 
     public enum ConfigKey {
@@ -39,7 +47,7 @@ public class RequestTaggingContextConfigurer {
             queryPart("requestTagging.statusReporter.queryPart"),
             connectionTimeout("requestTagging.statusReporter.connectionTimeout"),
             readTimeout("requestTagging.statusReporter.readTimeout"),
-            
+
             elasticsearchDocumentType("requestTagging.statusReporter.elasticsearchDocumentType"),
             elasticsearchIndexPrefixTemplate("requestTagging.statusReporter.elasticsearchIndexPrefixTemplate"),
 
@@ -94,7 +102,7 @@ public class RequestTaggingContextConfigurer {
 
         configureIntValue(ConfigKey.connectionTimeout, statusReporterFactory::setConnectionTimeout);
         configureIntValue(ConfigKey.readTimeout, statusReporterFactory::setReadTimeout);
-        
+
         configureStringValue(ConfigKey.elasticsearchDocumentType, statusReporterFactory::setElasticsearchDocumentType);
         configureStringValue(ConfigKey.elasticsearchIndexPrefixTemplate, statusReporterFactory::setElasticsearchIndexPrefixTemplate);
     }

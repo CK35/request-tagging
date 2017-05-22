@@ -5,6 +5,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+/**
+ * A status reporter which writes request data in a format which is suitable for
+ * the InfluxDB write HTTP endpoint.
+ * 
+ * @author Christian Kaspari
+ * @since 2.0.0
+ */
 public class InfluxDBStatusReporter implements StatusReporter {
 
     private final Instant instant;

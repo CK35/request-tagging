@@ -14,6 +14,13 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+/**
+ * A status reporter implementation which sends request tagging data via HTTP
+ * with the help of a {@link HttpURLConnection}.
+ * 
+ * @author Christian Kaspari
+ * @since 2.0.0
+ */
 public class HttpStatusReporter implements StatusReporter {
 
     private final Instant instant;
@@ -21,7 +28,7 @@ public class HttpStatusReporter implements StatusReporter {
     private final BiFunction<Instant, Consumer<String>, StatusReporter> reporters;
 
     private StatusReporter reporter;
-    
+
     public HttpStatusReporter(Instant instant, Connection connection, BiFunction<Instant, Consumer<String>, StatusReporter> reporters) {
         this.instant = instant;
         this.connection = connection;
@@ -31,7 +38,7 @@ public class HttpStatusReporter implements StatusReporter {
     public static Function<Instant, StatusReporter> statusReporter(URL url, int connectionTimeout, int readTimeout, BiFunction<Instant, Consumer<String>, StatusReporter> reporters) {
         return instant -> new HttpStatusReporter(instant, Connection.connect(url, connectionTimeout, readTimeout), reporters);
     }
-    
+
     @Override
     public void accept(Resource resource) {
         if (reporter == null) {
@@ -49,7 +56,7 @@ public class HttpStatusReporter implements StatusReporter {
             connection.close();
         }
     }
-    
+
     public static class Connection implements Consumer<String>, Closeable {
 
         private final HttpURLConnection connection;
@@ -59,7 +66,7 @@ public class HttpStatusReporter implements StatusReporter {
         public Connection(HttpURLConnection connection) {
             this.connection = Objects.requireNonNull(connection);
         }
-        
+
         public static Connection connect(URL url, int connectionTimeout, int readTimeout) {
             try {
                 boolean disconnect = true;

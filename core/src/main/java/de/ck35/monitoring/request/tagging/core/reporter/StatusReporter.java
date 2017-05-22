@@ -9,8 +9,8 @@ import java.util.Objects;
 import java.util.SortedMap;
 
 /**
- * Describes a reporter for request tagging data which is invoked by the request tagging provider.
- * A reporter will be called multiple times to add data. When all data has been added {@link #commit()}
+ * Describes a reporter for request tagging data which is invoked by the request tagging context.
+ * A reporter will be called multiple times to add data. When all data has been added {@link #close()}
  * will be called once so a batch can be created and send. 
  *
  * @author Christian Kaspari

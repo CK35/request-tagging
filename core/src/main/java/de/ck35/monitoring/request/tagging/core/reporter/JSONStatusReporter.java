@@ -8,6 +8,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+/**
+ * A generic status reporter which writes request data in a JSON format which is
+ * suitable for various endpoints.
+ * 
+ * @author Christian Kaspari
+ * @since 2.0.0
+ */
 public class JSONStatusReporter implements StatusReporter {
 
     private final Instant instant;
@@ -25,24 +32,24 @@ public class JSONStatusReporter implements StatusReporter {
         this.firstMeasurement = true;
         beforeMeasurements();
     }
-    
+
     protected void beforeMeasurements() {
         writer.accept("[");
     }
-    
+
     protected void afterMeasurements() {
         writer.accept("]");
     }
 
     protected void appendMeasurement(JsonObject measurementObject) {
-        if(firstMeasurement) {
+        if (firstMeasurement) {
             firstMeasurement = false;
         } else {
             writer.accept(",");
         }
         writer.accept(measurementObject.toJSON());
     }
-    
+
     @Override
     public void close() {
         afterMeasurements();
@@ -63,7 +70,8 @@ public class JSONStatusReporter implements StatusReporter {
                     JsonObject measurementObject = new JsonObject(object);
                     measurementObject.appendField("statusCodeName", measurement.getStatusCodeName());
                     measurementObject.appendField("totalNumberOfInvocations", measurement.getTotalNumberOfInvocations());
-                    measurement.getDurations().forEach(measurementObject::appendField);
+                    measurement.getDurations()
+                               .forEach(measurementObject::appendField);
                     appendMeasurement(measurementObject);
                 });
     }
@@ -95,15 +103,16 @@ public class JSONStatusReporter implements StatusReporter {
             appendFieldName(name);
             builder.append(value);
         }
-        
+
         public void appendField(String name, List<Duration> durations) {
-            if(durations.isEmpty()) {
+            if (durations.isEmpty()) {
                 return;
             }
             appendFieldName(name);
             builder.append("[");
             Iterator<Duration> iter = durations.iterator();
-            builder.append(iter.next().toMillis());
+            builder.append(iter.next()
+                               .toMillis());
             iter.forEachRemaining(duration -> {
                 builder.append(",");
                 builder.append(duration.toMillis());
@@ -121,9 +130,10 @@ public class JSONStatusReporter implements StatusReporter {
                    .append(fieldName)
                    .append("\":");
         }
-        
+
         public String toJSON() {
-            return builder.append("}").toString();
+            return builder.append("}")
+                          .toString();
         }
     }
 }

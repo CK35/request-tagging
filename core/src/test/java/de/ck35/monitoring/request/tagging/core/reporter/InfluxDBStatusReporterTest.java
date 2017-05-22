@@ -57,7 +57,7 @@ public class InfluxDBStatusReporterTest {
         
         influxDBStatusReporter().accept(resource);
 
-        assertEqualsContent("/InfluxDBWriteStrategyTest_Expected.txt", result.toString());
+        assertEqualsContent("/InfluxDBStatusReporterTest_Expected.txt", result.toString());
     }
     
     @Test
@@ -71,7 +71,7 @@ public class InfluxDBStatusReporterTest {
         
         influxDBStatusReporter().accept(resource);
 
-        assertEqualsContent("/InfluxDBWriteStrategyTest_Expected_with_durations.txt", result.toString());
+        assertEqualsContent("/InfluxDBStatusReporterTest_Expected_with_durations.txt", result.toString());
     }
     
     @Test
